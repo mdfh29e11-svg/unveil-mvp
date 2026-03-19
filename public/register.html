@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>회원가입 — Unveil</title>
+  <!-- face-api.js CDN -->
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0a0a0f; color: #e8e8f0;
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; padding: 40px 20px;
+    }
+    .card {
+      background: #13131f; border: 1px solid #222235;
+      border-radius: 16px; padding: 40px 36px; width: 100%; max-width: 500px;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+    .logo svg { width: 30px; height: 30px; }
+    .logo h1 {
+      font-size: 1.8rem; font-weight: 700;
+      background: linear-gradient(135deg, #c8f135, #8ee000);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    h2 { font-size: 1.25rem; font-weight: 600; margin-bottom: 6px; }
+    .sub { color: #666; font-size: 0.9rem; margin-bottom: 28px; }
+    .field { margin-bottom: 16px; }
+    label { display: block; font-size: 0.85rem; color: #aaa; margin-bottom: 6px; }
+    input[type=text], input[type=email], input[type=password] {
+      width: 100%; padding: 11px 14px;
+      background: #0d0d18; border: 1px solid #2a2a40;
+      border-radius: 10px; color: #e8e8f0; font-size: 0.95rem;
+      transition: border-color 0.2s;
+    }
+    input:focus { outline: none; border-color: #c8f135; }
+    .section-title {
+      font-size: 0.92rem; font-weight: 700; color: #c8f135;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin: 24px 0 14px; padding-top: 20px;
+      border-top: 1px solid #1e1e35;
+    }
+    /* ── 얼굴 등록 영역 ── */
+    .face-zone {
+      border: 2px dashed #2a2a40; border-radius: 12px;
+      padding: 24px; text-align: center;
+      transition: border-color 0.2s; cursor: pointer;
+      position: relative; overflow: hidden;
+    }
+    .face-zone:hover { border-color: #c8f135; }
+    .face-zone.has-face { border-color: #34c759; border-style: solid; }
+    .face-zone.error   { border-color: #ff3b30; border-style: solid; }
+    .face-zone input[type=file] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+    #facePreview {
+      width: 100px; height: 100px; border-radius: 50%;
+      object-fit: cover; margin: 0 auto 10px; display: none;
+      border: 3px solid #34c759;
+    }
+    .face-icon { font-size: 2.5rem; margin-bottom: 8px; }
+    .face-status { font-size: 0.9rem; color: #888; }
+    .face-status.ok { color: #34c759; }
+    .face-status.err { color: #ff6b6b; }
+
+    /* ── 진행 표시 ── */
+    .progress {
+      font-size: 0.82rem; color: #666; margin-top: 8px;
+      display: none; align-items: center; gap: 8px;
+    }
+    .progress.visible { display: flex; }
+    .spinner {
+      width: 14px; height: 14px; border: 2px solid #333;
+      border-top-color: #c8f135; border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── 버튼 ── */
+    .btn {
+      width: 100%; padding: 13px;
+      background: linear-gradient(135deg, #c8f135, #8ee000);
+      border: none; border-radius: 10px;
+      color: #0a0a0f; font-weight: 700; font-size: 1rem;
+      cursor: pointer; transition: opacity 0.2s; margin-top: 20px;
+    }
+    .btn:hover { opacity: 0.9; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-skip {
+      width: 100%; padding: 11px;
+      background: transparent; border: 1px solid #2a2a40;
+      border-radius: 10px; color: #666; font-size: 0.9rem;
+      cursor: pointer; transition: all 0.2s; margin-top: 8px;
+    }
+    .btn-skip:hover { border-color: #444; color: #aaa; }
+
+    /* ── 알림 ── */
+    .alert {
+      border-radius: 8px; padding: 11px 14px;
+      font-size: 0.88rem; margin-bottom: 16px; display: none;
+    }
+    .alert.err { background: rgba(255,59,48,0.12); border: 1px solid rgba(255,59,48,0.3); color: #ff6b6b; }
+    .alert.ok  { background: rgba(52,199,89,0.12);  border: 1px solid rgba(52,199,89,0.3);  color: #34c759; }
+    .links { text-align: center; margin-top: 20px; font-size: 0.88rem; color: #666; }
+    .links a { color: #c8f135; text-decoration: none; }
+    .back { display: flex; align-items: center; gap: 6px; color: #666; font-size: 0.85rem; text-decoration: none; margin-bottom: 20px; }
+    .back:hover { color: #aaa; }
+    .tip {
+      font-size: 0.82rem; color: #555; margin-top: 6px;
+      display: flex; align-items: flex-start; gap: 6px;
+    }
+    .tip span { flex-shrink: 0; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <a href="/" class="back">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <path d="M19 12H5M12 5l-7 7 7 7"/>
+    </svg>
+    돌아가기
+  </a>
+
+  <div class="logo">
+    <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="18" cy="18" r="17" stroke="#c8f135" stroke-width="2"/>
+      <ellipse cx="18" cy="18" rx="8" ry="5" stroke="#c8f135" stroke-width="1.5"/>
+      <circle cx="18" cy="18" r="3" fill="#c8f135"/>
+    </svg>
+    <h1>Unveil</h1>
+  </div>
+
+  <h2>회원가입</h2>
+  <p class="sub">내 얼굴을 등록하면 24시간 자동 모니터링이 시작됩니다</p>
+
+  <div class="alert err" id="errMsg"></div>
+  <div class="alert ok"  id="okMsg"></div>
+
+  <form id="regForm" novalidate>
+    <!-- 기본 정보 -->
+    <div class="field">
+      <label for="username">사용자명</label>
+      <input type="text" id="username" placeholder="홍길동" required maxlength="30" />
+    </div>
+    <div class="field">
+      <label for="email">이메일</label>
+      <input type="email" id="email" placeholder="your@email.com" required />
+    </div>
+    <div class="field">
+      <label for="password">비밀번호 <span style="color:#555">(6자 이상)</span></label>
+      <input type="password" id="password" placeholder="••••••••" required minlength="6" />
+    </div>
+
+    <!-- 얼굴 등록 -->
+    <div class="section-title">📷 본인 얼굴 등록 (권장)</div>
+
+    <div class="face-zone" id="faceZone">
+      <input type="file" id="faceFile" accept="image/jpeg,image/png,image/webp" />
+      <img id="facePreview" alt="얼굴 미리보기" />
+      <div class="face-icon">🫥</div>
+      <div class="face-status" id="faceStatus">사진을 클릭하거나 드래그하여 업로드</div>
+    </div>
+
+    <div class="progress" id="faceProgress">
+      <div class="spinner"></div>
+      <span id="progressText">AI 모델 로딩 중... (최초 1회, 약 10초 소요)</span>
+    </div>
+
+    <div class="tip">
+      <span>ℹ️</span>
+      <span>얼굴이 잘 보이는 정면 사진 1장을 올려주세요. 딥페이크 탐지 시 내 얼굴과 일치 여부를 비교합니다. 나중에 대시보드에서 등록/변경 가능합니다.</span>
+    </div>
+
+    <button type="submit" class="btn" id="submitBtn">가입 완료</button>
+    <button type="button" class="btn-skip" id="skipFaceBtn">얼굴 등록 없이 가입</button>
+  </form>
+
+  <div class="links">
+    이미 계정이 있으신가요? <a href="/login.html">로그인</a>
+  </div>
+</div>
+
+<script>
+  const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.13/model';
+  let faceDescriptor = null;
+  let modelsLoaded   = false;
+
+  // ── face-api.js 모델 로딩 ─────────────────────────────────
+  async function loadModels() {
+    const prog = document.getElementById('faceProgress');
+    const txt  = document.getElementById('progressText');
+    if (modelsLoaded) return true;
+    prog.classList.add('visible');
+    txt.textContent = 'AI 모델 로딩 중... (최초 1회, 약 10-30초 소요)';
+    try {
+      // faceapi가 로드될 때까지 대기
+      let waited = 0;
+      while (typeof faceapi === 'undefined' && waited < 15000) {
+        await new Promise(r => setTimeout(r, 300));
+        waited += 300;
+      }
+      if (typeof faceapi === 'undefined') throw new Error('face-api.js CDN 로드 실패');
+
+      await Promise.all([
+        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+      ]);
+      modelsLoaded = true;
+      prog.classList.remove('visible');
+      return true;
+    } catch(e) {
+      prog.classList.remove('visible');
+      console.error('모델 로딩 실패:', e);
+      return false;
+    }
+  }
+
+  // ── 얼굴 감지 및 descriptor 추출 ─────────────────────────
+  async function extractFaceDescriptor(imgEl) {
+    if (!modelsLoaded) return null;
+    const det = await faceapi
+      .detectSingleFace(imgEl, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
+      .withFaceLandmarks()
+      .withFaceDescriptor();
+    return det ? Array.from(det.descriptor) : null;
+  }
+
+  // ── 파일 입력 처리 ────────────────────────────────────────
+  document.getElementById('faceFile').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    processFaceImage(file);
+  });
+
+  // ── 드래그앤드롭 ─────────────────────────────────────────
+  const zone = document.getElementById('faceZone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = '#c8f135'; });
+  zone.addEventListener('dragleave', () => { zone.style.borderColor = ''; });
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.style.borderColor = '';
+    const file = e.dataTransfer?.files[0];
+    if (file && file.type.startsWith('image/')) processFaceImage(file);
+  });
+
+  async function processFaceImage(file) {
+    const prog   = document.getElementById('faceProgress');
+    const txt    = document.getElementById('progressText');
+    const status = document.getElementById('faceStatus');
+    const prev   = document.getElementById('facePreview');
+    const icon   = zone.querySelector('.face-icon');
+
+    status.className = 'face-status';
+    status.textContent = '이미지 처리 중...';
+    prog.classList.add('visible');
+    txt.textContent = 'AI 모델 로딩 중...';
+
+    // 미리보기
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      prev.src = ev.target.result;
+      prev.style.display = 'block';
+      icon.style.display = 'none';
+
+      // 모델 로드
+      const loaded = await loadModels();
+      if (!loaded) {
+        status.textContent = '⚠️ AI 모델 로드 실패 — 얼굴 없이 가입하거나 나중에 등록하세요';
+        status.className   = 'face-status err';
+        zone.className     = 'face-zone error';
+        prog.classList.remove('visible');
+        return;
+      }
+
+      txt.textContent = '얼굴 인식 중...';
+      const img = new Image();
+      img.onload = async () => {
+        try {
+          faceDescriptor = await extractFaceDescriptor(img);
+          prog.classList.remove('visible');
+          if (faceDescriptor) {
+            status.textContent = '✅ 얼굴 등록 준비 완료!';
+            status.className   = 'face-status ok';
+            zone.className     = 'face-zone has-face';
+          } else {
+            status.textContent = '❌ 얼굴을 인식하지 못했습니다. 정면 사진을 업로드해주세요.';
+            status.className   = 'face-status err';
+            zone.className     = 'face-zone error';
+            faceDescriptor     = null;
+          }
+        } catch(err) {
+          prog.classList.remove('visible');
+          status.textContent = '❌ 얼굴 인식 오류: ' + err.message;
+          status.className   = 'face-status err';
+          zone.className     = 'face-zone error';
+        }
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ── 폼 제출 ───────────────────────────────────────────────
+  async function doSubmit(skipFace = false) {
+    const err = document.getElementById('errMsg');
+    const ok  = document.getElementById('okMsg');
+    const btn = document.getElementById('submitBtn');
+    err.style.display = ok.style.display = 'none';
+
+    const username = document.getElementById('username').value.trim();
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!username || !email || !password) {
+      err.textContent = '모든 필드를 입력해주세요.'; err.style.display = 'block'; return;
+    }
+    if (password.length < 6) {
+      err.textContent = '비밀번호는 6자 이상이어야 합니다.'; err.style.display = 'block'; return;
+    }
+
+    btn.disabled = true; btn.textContent = '가입 처리 중...';
+    try {
+      const body = { username, email, password };
+      if (!skipFace && faceDescriptor) body.faceDescriptor = faceDescriptor;
+
+      const res  = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        err.textContent = data.error || '가입 실패'; err.style.display = 'block';
+      } else {
+        // 자동 로그인
+        const loginRes  = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const loginData = await loginRes.json();
+        if (loginData.ok) {
+          localStorage.setItem('unveil_token', loginData.token);
+          localStorage.setItem('unveil_user', JSON.stringify(loginData.user));
+        }
+        ok.textContent = '🎉 가입 완료! 대시보드로 이동합니다...';
+        ok.style.display = 'block';
+        setTimeout(() => { window.location.href = '/dashboard.html'; }, 1200);
+      }
+    } catch(e) {
+      err.textContent = '서버 연결 실패. 서버가 실행 중인지 확인해주세요.';
+      err.style.display = 'block';
+    } finally {
+      btn.disabled = false; btn.textContent = '가입 완료';
+    }
+  }
+
+  document.getElementById('regForm').addEventListener('submit', e => { e.preventDefault(); doSubmit(false); });
+  document.getElementById('skipFaceBtn').addEventListener('click', () => doSubmit(true));
+</script>
+</body>
+</html>

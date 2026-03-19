@@ -1,0 +1,23 @@
+# Environment variables (NEVER commit this!)
+.env
+
+# Node
+node_modules/
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 데이터 파일
+data/
+*.json
+
+# Windows 실행 파일
+*.bat
+*.ps1
+
+# 학습 파일
+*.ipynb
+*.py
+model/
