@@ -1326,7 +1326,6 @@ function mergeResults(rd, hive, aion, exif, imageStats, localResult) {
   console.log(`[RD  raw] score=${rdScore??'null'} hasData=${rdHasData} models=${JSON.stringify(rd?.models?.slice(0,3)??[])}`);
   console.log(`[Hive raw] score=${hiveScore??'null'} classes=${JSON.stringify(hive?.classes?.slice(0,5)??[])}`);
   console.log(`[AION raw] score=${aionScore??'null'} verdict="${aion?.verdict??''}" generator="${aion?.generator??''}" isAI=${aion?.isAI??null}`);
-  console.log(`[HF  raw] score=${hfScore??'null'}`);
   console.log(`[Local  ] score=${localScore??'null'} verdict="${localResult?.verdict??''}" loaded=${localResult?.loaded??false}`);
   console.log(`[EXIF   ] suspicion=${exifSuspicion} aiSoftware="${exif?.aiSoftware??''}" hasPrompt=${exif?.hasAiPrompt??false}`);
   console.log(`[Stats  ] suspicion=${imgStatsSuspicion} thumb=${imgThumbMismatch} ganScore=${imageStats?.ganFrequencyScore??null}`);
@@ -1684,7 +1683,7 @@ async function handleReverseSearch(req, res) {
   if (!bm) return jsonRes(res, 400, { ok: false, error: '잘못된 요청 (boundary 없음)' });
 
   const parts   = parseMultipart(body, bm[1]);
-  const part    = parts.find(p => p.name === 'image' && p.filename);
+  const part    = parts.find(p => (p.name === 'media' || p.name === 'image') && p.filename);
   if (!part) return jsonRes(res, 400, { ok: false, error: '파일 없음' });
 
   const { filename, contentType: fileMime, data: fileBuf } = part;
