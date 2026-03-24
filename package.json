@@ -1,0 +1,12 @@
+{
+  "name": "unveil-deepfake",
+  "version": "1.0.0",
+  "description": "Unveil - 딥페이크 탐지 시스템",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
