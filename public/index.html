@@ -2332,8 +2332,8 @@
     if (tab === 'face') {
       SECTIONS.face.style.display = 'block';
       const isLoggedIn = !!authToken;
-      document.getElementById('face-login-prompt').style.display = isLoggedIn ? 'none' : 'block';
-      document.getElementById('face-reg-card').style.display     = isLoggedIn ? 'block' : 'none';
+      document.getElementById('face-login-prompt')?.style.display = isLoggedIn ? 'none' : 'block';
+      document.getElementById('face-reg-card')?.style.display     = isLoggedIn ? 'block' : 'none';
     } else if (tab === 'image') {
       SECTIONS.detect.style.display = 'block';
       // 내부 서브탭 상태 유지 (기본 image)
