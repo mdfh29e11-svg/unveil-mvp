@@ -5,7 +5,9 @@
 const fs   = require('fs');
 const path = require('path');
 
-const DATA_DIR = path.join(__dirname, 'data');
+// DATA_DIR: 환경변수 DATA_DIR 설정 시 해당 경로 사용 (Railway 영구 볼륨 지원)
+// Railway에서 볼륨을 /data 에 마운트하고 DATA_DIR=/data 설정하면 배포해도 데이터 유지됨
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 function readJSON(filename, def) {
