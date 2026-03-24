@@ -1025,6 +1025,18 @@ async function hiveBase64(fileBuf, fileMime) {
 
 function parseHive(data, method) {
   try {
+    // 영상의 경우 output이 프레임 배열일 수 있음 → 모든 프레임 로그 출력
+    const allOutputs = data?.status?.[0]?.response?.output || data?.output || [];
+    if (Array.isArray(allOutputs) && allOutputs.length > 1) {
+      console.log(`[Hive/${method}] 🎬 영상 프레임 ${allOutputs.length}개 감지됨:`);
+      allOutputs.forEach((frame, i) => {
+        const cls = frame?.classes || [];
+        if (cls.length > 0) {
+          console.log(`  프레임[${i}]: ${cls.map(c=>`${c.class}=${(c.score*100).toFixed(1)}%`).join(', ')}`);
+        }
+      });
+    }
+
     const output =
       data?.status?.[0]?.response?.output?.[0]?.classes ||
       data?.status?.[0]?.response?.output?.classes ||
@@ -1032,7 +1044,7 @@ function parseHive(data, method) {
       data?.classes || [];
 
     if (output.length === 0) {
-      console.warn(`[Hive/${method}] classes 없음. 전체구조:`, JSON.stringify(data).slice(0,300));
+      console.warn(`[Hive/${method}] classes 없음. 전체구조:`, JSON.stringify(data).slice(0,500));
       return null;
     }
     console.log(`[Hive/${method}] 클래스:`, output.map(c=>`${c.class}=${(c.score*100).toFixed(1)}%`).join(', '));
@@ -1309,9 +1321,21 @@ function mergeResults(rd, hive, aion, exif, imageStats, localResult) {
     console.log(`[이미지통계] 썸네일-본문 불일치 탐지 → UNCERTAIN 격상 고려`);
   }
 
-  // FAKE 판정: 2개 이상 API 동의 OR 1개 API가 90% 이상 극확신
+  // ── raw API 응답 요약 콘솔 출력 (디버깅용) ──────────────────
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━ API 응답 요약 ━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log(`[RD  raw] score=${rdScore??'null'} hasData=${rdHasData} models=${JSON.stringify(rd?.models?.slice(0,3)??[])}`);
+  console.log(`[Hive raw] score=${hiveScore??'null'} classes=${JSON.stringify(hive?.classes?.slice(0,5)??[])}`);
+  console.log(`[AION raw] score=${aionScore??'null'} verdict="${aion?.verdict??''}" generator="${aion?.generator??''}" isAI=${aion?.isAI??null}`);
+  console.log(`[HF  raw] score=${hfScore??'null'}`);
+  console.log(`[Local  ] score=${localScore??'null'} verdict="${localResult?.verdict??''}" loaded=${localResult?.loaded??false}`);
+  console.log(`[EXIF   ] suspicion=${exifSuspicion} aiSoftware="${exif?.aiSoftware??''}" hasPrompt=${exif?.hasAiPrompt??false}`);
+  console.log(`[Stats  ] suspicion=${imgStatsSuspicion} thumb=${imgThumbMismatch} ganScore=${imageStats?.ganFrequencyScore??null}`);
+  console.log(`[집계   ] respondedCount=${respondedCount} fakeCount=${fakeCount} score=${score}% maxScore=${maxScore}%`);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+  // FAKE 판정: 2개 이상 API 동의 OR 1개 API가 70% 이상 확신 (기존 90% → 70%로 하향)
   // EXIF AI 소프트웨어 감지 시: 단일 API 확신만으로도 FAKE 가능
-  const highConfidenceFake = maxScore >= 90 && fakeCount >= 1;
+  const highConfidenceFake = maxScore >= 70 && fakeCount >= 1;
   const exifBoostedFake    = exifAiDetected && fakeCount >= 1;
   const statsBoostedFake   = imgThumbMismatch && fakeCount >= 1;
   // API 없어도 EXIF 확신 시 FAKE 판정 (AI 소프트웨어가 명시적으로 감지됨)
@@ -1322,7 +1346,7 @@ function mergeResults(rd, hive, aion, exif, imageStats, localResult) {
   let verdict;
   if (fakeCount >= 2 || highConfidenceFake || exifBoostedFake || statsBoostedFake || exifAloneFake) verdict = 'FAKE';
   else if (rdHasNoData && !hiveScore && !aionScore && !exifAiDetected && !statsAloneUncertain) verdict = 'INSUFFICIENT';
-  else if (fakeCount === 1 && respondedCount <= 1)             verdict = 'REAL';
+  // 버그 수정: 단일 API FAKE 신호 → REAL이 아닌 UNCERTAIN으로 처리
   else if (fakeCount === 1)                                    verdict = 'UNCERTAIN';
   else if (imgThumbMismatch)                                   verdict = 'UNCERTAIN';
   else if (exifAiDetected)                                     verdict = 'UNCERTAIN'; // EXIF 단독 (API 유무 무관)
@@ -1642,7 +1666,28 @@ async function handleReverseSearch(req, res) {
   const user  = auth.validate(token);
   if (!user) return jsonRes(res, 401, { ok: false, error: '로그인 필요' });
 
-  const { contentType, fileBuf, filename, fileMime } = await parseMultipart(req);
+  // request body를 스트림으로 읽은 뒤 parseMultipart 호출 (handleAnalyze와 동일 방식)
+  const MAX_REVERSE_BYTES = 4 * 1024 * 1024; // 4MB
+  const chunks = []; let total = 0;
+  await new Promise((resolve, reject) => {
+    req.on('data', c => {
+      total += c.length;
+      if (total > MAX_REVERSE_BYTES) { req.destroy(); return; }
+      chunks.push(c);
+    });
+    req.on('end', resolve);
+    req.on('error', reject);
+  });
+
+  const body = Buffer.concat(chunks);
+  const bm   = (req.headers['content-type'] || '').match(/boundary=(.+)$/);
+  if (!bm) return jsonRes(res, 400, { ok: false, error: '잘못된 요청 (boundary 없음)' });
+
+  const parts   = parseMultipart(body, bm[1]);
+  const part    = parts.find(p => p.name === 'image' && p.filename);
+  if (!part) return jsonRes(res, 400, { ok: false, error: '파일 없음' });
+
+  const { filename, contentType: fileMime, data: fileBuf } = part;
   if (!fileBuf || fileBuf.length === 0) return jsonRes(res, 400, { ok: false, error: '파일 없음' });
   if (!fileMime.startsWith('image/')) return jsonRes(res, 400, { ok: false, error: '이미지 파일만 지원합니다' });
   if (fileBuf.length > 4 * 1024 * 1024) return jsonRes(res, 400, { ok: false, error: '이미지 4MB 이하로 업로드해주세요' });
@@ -1784,14 +1829,24 @@ async function handleAnalyzeUrl(req, res) {
 
     lastDebug = { rdRaw:null, rdError:null, hiveRaw:null, hiveStatus:null, hiveError:null, aionRaw:null, aionStatus:null, aionError:null };
 
+    // AION은 이미지 전용(/v1/reports/image) → 영상 파일은 스킵
+    const aionPromise = isVideo ? Promise.resolve(null) : analyzeWithAION(buf, filename, mime);
+    if (isVideo) console.log('[영상 분석] AION 스킵 (이미지 전용 API) — RD + Hive로만 분석');
+
     const [rdRaw, hiveRaw, aionRaw] = await Promise.allSettled([
       analyzeWithRD(buf, filename, mime, isVideo),
       analyzeWithHive(buf, filename, mime),
-      analyzeWithAION(buf, filename, mime)
+      aionPromise
     ]);
     const rd   = rdRaw.status  === 'fulfilled' ? rdRaw.value   : null;
     const hive = hiveRaw.status === 'fulfilled' ? hiveRaw.value : null;
     const aion = aionRaw.status === 'fulfilled' ? aionRaw.value : null;
+
+    if (isVideo) {
+      console.log(`[영상 분석 결과] RD score=${rd?.score??'null'} hasData=${rd?.hasRealData??false}`);
+      console.log(`[영상 분석 결과] Hive score=${hive?.score??'null'} classes=${JSON.stringify(hive?.classes?.slice(0,5)??[])}`);
+      console.log(`[영상 분석 결과] RD models=${JSON.stringify(rd?.models?.slice(0,5)??[])}`);
+    }
     if (rdRaw.status  === 'rejected') lastDebug.rdError   = rdRaw.reason?.message;
     if (hiveRaw.status === 'rejected') lastDebug.hiveError = hiveRaw.reason?.message;
     if (aionRaw.status === 'rejected') lastDebug.aionError = aionRaw.reason?.message;
