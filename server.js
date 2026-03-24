@@ -9,7 +9,7 @@ const fs    = require('fs');
 const path  = require('path');
 const url   = require('url');
 const crypto = require('crypto');
-const zlib  = require('zlib');
+const zlib  = require('zlib');h
 
 // ── 인증 / DB 모듈 ───────────────────────────────────────
 const db         = require('./db');
@@ -2217,7 +2217,7 @@ const server = http.createServer((req, res) => {
   serveStatic(res, fp);
 });
 
-server.listen(PORT, async () => {
+server.listen(PORT, '0.0.0.0', async () => {
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('  🛡️  Unveil - 딥페이크 탐지 시스템 v3');
   console.log(`  ▶  서비스:   http://localhost:${PORT}`);
