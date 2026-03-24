@@ -852,6 +852,7 @@
       <div class="score-value" id="score-value">0%</div>
       <div class="score-desc" id="score-desc"></div>
     </div>
+    <div style="margin-top:10px;padding:10px 14px;background:rgba(255,200,0,0.06);border-left:3px solid #555;border-radius:6px;font-size:0.73rem;color:#777;line-height:1.6;">본인 사진도 조명·각도·파일 압축 방식에 따라 AI가 합성 의심으로 판정할 수 있습니다. 판정 결과는 참고용이며, 전문가 확인을 권장합니다.</div>
 
     <!-- 모델별 결과 -->
     <div class="models-section" id="models-section" style="display:none">
@@ -2650,7 +2651,6 @@
       searchBtn.style.opacity = '.5';
       searchBtn.style.cursor = 'not-allowed';
       statusEl.style.display = 'none';
-      resCard.style.display = 'none';
     }
 
     fileInput.addEventListener('change', e => {
@@ -2707,7 +2707,7 @@
 
         // 수동 검색 링크
         manualBtns.innerHTML = '';
-        const manualLinks = data.manualLinks || [];
+                const manualLinks = Array.isArray(data.manualLinks) ? data.manualLinks : [];
         manualLinks.forEach(link => {
           const a = document.createElement('a');
           a.href = link.url; a.target = '_blank'; a.rel = 'noopener';
@@ -3243,30 +3243,23 @@
 
       <!-- Bing 없을 때 수동 검색 안내 -->
       <div id="search-manual-card" style="display:none;" class="dash-card">
-        <h3 style="color:#ffaa44;">⚠️ 자동 검색 미활성 — 수동 검색 안내</h3>
-        <p style="font-size:0.82rem;color:#888;margin-bottom:14px;">
-          <code style="background:#1a1a2e;padding:2px 7px;border-radius:4px;color:#c8f135;">BING_SEARCH_KEY</code>를 .env에 설정하면 자동 검색이 활성화됩니다.<br>
-          지금은 아래 검색 엔진에 <strong>직접 업로드</strong>해서 확인할 수 있습니다.
-        </p>
+        <p style="font-size:0.9rem;color:#aaa;margin:0 0 16px;">자동 검색 기능은 준비 중입니다. 아래 링크에서 직접 검색하실 수 있어요.</p>
         <div style="display:flex;flex-direction:column;gap:8px;">
           <a href="https://images.google.com/" target="_blank" style="display:flex;align-items:center;gap:10px;background:#0d0d18;border:1px solid #2a2a45;border-radius:8px;padding:12px 14px;text-decoration:none;color:#e8e8f0;">
             <span style="font-size:1.2rem;">🌐</span>
-            <div><div style="font-size:0.88rem;font-weight:600;">Google 이미지 검색</div><div style="font-size:0.75rem;color:#555;">images.google.com → 카메라 아이콘 → 파일 업로드</div></div>
+            <div><div style="font-size:0.88rem;font-weight:600;">Google 이미지 검색</div><div style="font-size:0.75rem;color:#888;">images.google.com</div></div>
             <span style="margin-left:auto;color:#555;font-size:0.8rem;">열기 →</span>
           </a>
           <a href="https://yandex.com/images/" target="_blank" style="display:flex;align-items:center;gap:10px;background:#0d0d18;border:1px solid #2a2a45;border-radius:8px;padding:12px 14px;text-decoration:none;color:#e8e8f0;">
             <span style="font-size:1.2rem;">🔎</span>
-            <div><div style="font-size:0.88rem;font-weight:600;">Yandex 이미지 검색</div><div style="font-size:0.75rem;color:#555;">얼굴 인식에 특히 강함 — 카메라 아이콘 → 파일 선택</div></div>
+            <div><div style="font-size:0.88rem;font-weight:600;">Yandex 이미지 검색</div><div style="font-size:0.75rem;color:#888;">얼굴 인식에 특히 강함</div></div>
             <span style="margin-left:auto;color:#555;font-size:0.8rem;">열기 →</span>
           </a>
           <a href="https://tineye.com/" target="_blank" style="display:flex;align-items:center;gap:10px;background:#0d0d18;border:1px solid #2a2a45;border-radius:8px;padding:12px 14px;text-decoration:none;color:#e8e8f0;">
             <span style="font-size:1.2rem;">👁️</span>
-            <div><div style="font-size:0.88rem;font-weight:600;">TinEye 역방향 검색</div><div style="font-size:0.75rem;color:#555;">정확한 이미지 매칭 전문 — 드래그&드롭 또는 클릭 업로드</div></div>
+            <div><div style="font-size:0.88rem;font-weight:600;">TinEye 역방향 검색</div><div style="font-size:0.75rem;color:#888;">정확한 이미지 매칭 전문</div></div>
             <span style="margin-left:auto;color:#555;font-size:0.8rem;">열기 →</span>
           </a>
-        </div>
-        <div style="margin-top:12px;font-size:0.75rem;color:#444;background:#0a0a0f;border-radius:6px;padding:10px 12px;">
-          💡 <strong style="color:#666;">Yandex를 가장 먼저 확인하세요.</strong> 얼굴 인식 정확도가 Google보다 높아서 유출 이미지를 발견할 가능성이 큽니다.
         </div>
       </div>
 
