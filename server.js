@@ -32,18 +32,18 @@ function loadEnv() {
 loadEnv();
 
 const PORT         = process.env.PORT || 3000;
-const RD_API_KEY   = process.env.RD_API_KEY;
-const HIVE_API_KEY = process.env.HIVE_API_KEY;
-const AION_API_KEY = process.env.AION_API_KEY;  // AI or Not
+const RD_API_KEY   = (process.env.RD_API_KEY   || '').replace(/[\r\n\t]/g,'').trim();
+const HIVE_API_KEY = (process.env.HIVE_API_KEY || '').replace(/[\r\n\t]/g,'').trim();const AION_API_KEY = (process.env.AION_API_KEY || '').replace(/[\r\n\t]/g,'').trim();  // AI or Not
 const BING_KEY     = process.env.BING_SEARCH_KEY || null;  // Bing Visual Search (무료 1000/월)
+const GV_API_KEY   = process.env.GV_API_KEY   || null;  // Google Vision API (web detection, 1000/월 무료)
 const RD_HOST      = 'api.prd.realitydefender.xyz';
 const HIVE_HOST    = 'api.thehive.ai';
 const AION_HOST    = 'api.aiornot.com';
 const BING_HOST    = 'api.cognitive.microsoft.com';
 
-// FAKE ≥ 40%, UNCERTAIN ≥ 25%
-const FAKE_THRESHOLD      = 40;
-const UNCERTAIN_THRESHOLD = 25;
+// FAKE ≥ 30%, UNCERTAIN ≥ 20%
+const FAKE_THRESHOLD      = 30;
+const UNCERTAIN_THRESHOLD = 20;
 
 if (!RD_API_KEY)   { console.error('❌ RD_API_KEY 없음'); process.exit(1); }
 if (!HIVE_API_KEY) console.warn('⚠️  HIVE_API_KEY 없음 — Hive 비활성');
@@ -1334,7 +1334,7 @@ function mergeResults(rd, hive, aion, exif, imageStats, localResult) {
 
   // FAKE 판정: 2개 이상 API 동의 OR 1개 API가 70% 이상 확신 (기존 90% → 70%로 하향)
   // EXIF AI 소프트웨어 감지 시: 단일 API 확신만으로도 FAKE 가능
-  const highConfidenceFake = maxScore >= 70 && fakeCount >= 1;
+  const highConfidenceFake = maxScore >= 50 && fakeCount >= 1; // 단일 API 50% 이상 확신 시 FAKE
   const exifBoostedFake    = exifAiDetected && fakeCount >= 1;
   const statsBoostedFake   = imgThumbMismatch && fakeCount >= 1;
   // API 없어도 EXIF 확신 시 FAKE 판정 (AI 소프트웨어가 명시적으로 감지됨)
@@ -1350,7 +1350,7 @@ function mergeResults(rd, hive, aion, exif, imageStats, localResult) {
   else if (imgThumbMismatch)                                   verdict = 'UNCERTAIN';
   else if (exifAiDetected)                                     verdict = 'UNCERTAIN'; // EXIF 단독 (API 유무 무관)
   else if (statsAloneUncertain)                                verdict = 'UNCERTAIN'; // 이미지통계 단독 강신호
-  else if (rdReal && hiveReal && aionReal)                     verdict = 'REAL';
+  else if (rdReal && hiveReal && aionReal && score < 35)        verdict = 'REAL';   // 모든 API 낮은 점수 동의 시만 REAL
   else                                                         verdict = 'UNCERTAIN';
 
   // FAKE면 최고 위험 점수, REAL이면 실제 가중평균 표시 (0으로 내리지 않음)
@@ -1659,6 +1659,42 @@ async function searchWithBing(imageBuf, filename, mime) {
   } catch(e) { console.warn('[Bing/VS] 오류:', e.message); return null; }
 }
 
+// Google Vision API — Web Detection (무료 1,000회/월, GV_API_KEY 필요)
+async function searchWithGoogleVision(imageBuf) {
+  if (!GV_API_KEY) return null;
+  try {
+    const b64 = imageBuf.toString('base64');
+    const body = JSON.stringify({
+      requests: [{
+        image: { content: b64 },
+        features: [{ type: 'WEB_DETECTION', maxResults: 20 }]
+      }]
+    });
+    const res = await httpsReq({
+      hostname: 'vision.googleapis.com',
+      path: '/v1/images:annotate?key=' + GV_API_KEY,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    }, body);
+    console.log('[GVision] HTTP', res.status);
+    if (res.status !== 200) { console.warn('[GVision] 오류 응답:', JSON.stringify(res.data).slice(0,200)); return null; }
+    const web = res.data && res.data.responses && res.data.responses[0] && res.data.responses[0].webDetection;
+    if (!web) return null;
+    const hits = [];
+    for (const page of (web.pagesWithMatchingImages || []).slice(0, 20)) {
+      hits.push({ type: 'page', title: page.pageTitle || '', pageUrl: page.url || '', imageUrl: '', thumbnailUrl: '' });
+    }
+    for (const img of (web.fullMatchingImages || []).slice(0, 10)) {
+      hits.push({ type: 'image', title: '완전 일치', pageUrl: '', imageUrl: img.url || '', thumbnailUrl: '' });
+    }
+    for (const img of (web.partialMatchingImages || []).slice(0, 10)) {
+      hits.push({ type: 'similar', title: '부분 일치', pageUrl: '', imageUrl: img.url || '', thumbnailUrl: '' });
+    }
+    console.log('[GVision] 결과:', hits.length, '개');
+    return hits;
+  } catch(e) { console.warn('[GVision] 오류:', e.message); return null; }
+}
+
 // 유출 탐색 핸들러
 async function handleReverseSearch(req, res) {
   const token = auth.getToken(req);
@@ -1666,7 +1702,8 @@ async function handleReverseSearch(req, res) {
   if (!user) return jsonRes(res, 401, { ok: false, error: '로그인 필요' });
 
   // request body를 스트림으로 읽은 뒤 parseMultipart 호출 (handleAnalyze와 동일 방식)
-  const MAX_REVERSE_BYTES = 4 * 1024 * 1024; // 4MB
+  try {
+    const MAX_REVERSE_BYTES = 4 * 1024 * 1024; // 4MB
   const chunks = []; let total = 0;
   await new Promise((resolve, reject) => {
     req.on('data', c => {
@@ -1694,10 +1731,22 @@ async function handleReverseSearch(req, res) {
   console.log(`[유출탐색] "${filename}" ${(fileBuf.length/1024).toFixed(0)}KB — userId=${user.id}`);
 
   // Bing Visual Search 시도
-  const bingHits = await searchWithBing(fileBuf, filename, fileMime);
+  // Bing + Google Vision 병렬 검색 (가능한 API 자동 선택)
+  let allHits = [];
+  try {
+    const bingHits = await searchWithBing(fileBuf, filename, fileMime);
+    if (bingHits && bingHits.length > 0) { allHits = allHits.concat(bingHits); console.log('[유출탐색] Bing 결과:', bingHits.length, '개'); }
+  } catch(e) { console.warn('[유출탐색] Bing 오류:', e.message); }
+
+  try {
+    const gvHits = await searchWithGoogleVision(fileBuf);
+    if (gvHits && gvHits.length > 0) { allHits = allHits.concat(gvHits); console.log('[유출탐색] GVision 결과:', gvHits.length, '개'); }
+  } catch(e) { console.warn('[유출탐색] GVision 오류:', e.message); }
+
+  console.log('[유출탐색] 총 결과:', allHits.length, '개 (Bing 키:', !!BING_KEY, '/ GV 키:', !!GV_API_KEY, ')');
 
   // 결과 분류
-  const results = (bingHits || []).map(h => ({
+  const results = allHits.map(h => ({
     ...h,
     risk: classifyUrl(h.pageUrl || h.imageUrl)
   }));
@@ -1732,7 +1781,11 @@ async function handleReverseSearch(req, res) {
       tineye: 'https://tineye.com/',
     }
   });
-}
+
+  } catch(e) {
+    console.error('[유출탐색] 예외:', e.message);
+    jsonRes(res, 500, { ok: false, error: '서버 오류: ' + e.message });
+  }}
 
 // ═══════════════════════════════════════════════════════════════
 // URL 분석 API  — /api/analyze-url
@@ -1876,6 +1929,101 @@ async function handleAnalyzeUrl(req, res) {
   } catch(e) {
     console.error('[URL 분석 오류]', e.message);
     jsonRes(res, 500, { error: e.message });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 내 얼굴 역방향 검색  — /api/face/search
+// 사진을 업로드하면 인터넷에서 유사 이미지를 탐색해 유출 여부를 확인
+// ═══════════════════════════════════════════════════════════════
+// 얼굴 관련 의심 패턴 (성인/딥페이크 사이트 우선 탐지)
+const FACE_SUSPICIOUS_PATTERNS = [
+  'deepnude','deepfake','undress','nudify','faceswap','onlyfans','xvideo','pornhub',
+  'xhamster','redtube','youporn','rule34','nsfw','leakednudes','fappening',
+  'nudogram','pervert','hentai','anonib','motherless','amateur','sextape',
+];
+function classifyFaceUrl(rawUrl) {
+  if (!rawUrl) return 'unknown';
+  try {
+    const lower = rawUrl.toLowerCase();
+    if (FACE_SUSPICIOUS_PATTERNS.some(p => lower.includes(p))) return 'suspicious';
+    const hostname = new URL(rawUrl).hostname.toLowerCase();
+    const safe = ['google.','bing.','instagram.','twitter.','x.com','youtube.','naver.','kakao.','facebook.','wikipedia.'];
+    if (safe.some(s => hostname.includes(s))) return 'safe';
+    return 'unknown';
+  } catch { return 'unknown'; }
+}
+
+async function handleFaceSearch(req, res) {
+  const token = auth.getToken(req);
+  const user  = auth.validate(token);
+  if (!user) return jsonRes(res, 401, { ok: false, error: '로그인 필요' });
+
+  try {
+    const MAX_BYTES = 5 * 1024 * 1024;
+    const chunks = []; let total = 0;
+    await new Promise((resolve, reject) => {
+      req.on('data', c => { total += c.length; if (total > MAX_BYTES) { req.destroy(); return; } chunks.push(c); });
+      req.on('end', resolve); req.on('error', reject);
+    });
+    const body = Buffer.concat(chunks);
+    const bm = (req.headers['content-type'] || '').match(/boundary=(.+)$/);
+    if (!bm) return jsonRes(res, 400, { ok: false, error: '잘못된 요청' });
+
+    const parts = parseMultipart(body, bm[1]);
+    const part  = parts.find(p => (p.name === 'face' || p.name === 'media' || p.name === 'image') && p.filename);
+    if (!part || !part.data || part.data.length === 0)
+      return jsonRes(res, 400, { ok: false, error: '얼굴 사진이 없습니다' });
+
+    const { filename, contentType: fileMime, data: fileBuf } = part;
+    if (!fileMime.startsWith('image/'))
+      return jsonRes(res, 400, { ok: false, error: '이미지 파일만 지원합니다' });
+
+    console.log(`[얼굴탐색] "${filename}" ${(fileBuf.length/1024).toFixed(0)}KB — userId=${user.id}`);
+
+    // Bing + Google Vision 병렬 검색
+    let allHits = [];
+    try {
+      const bingHits = await searchWithBing(fileBuf, filename, fileMime);
+      if (bingHits && bingHits.length > 0) allHits = allHits.concat(bingHits);
+    } catch(e) { console.warn('[얼굴탐색] Bing 오류:', e.message); }
+    try {
+      const gvHits = await searchWithGoogleVision(fileBuf);
+      if (gvHits && gvHits.length > 0) allHits = allHits.concat(gvHits);
+    } catch(e) { console.warn('[얼굴탐색] GVision 오류:', e.message); }
+
+    // 얼굴 특화 분류 (성인/딥페이크 사이트 강조)
+    const results = allHits.map(h => ({
+      ...h, risk: classifyFaceUrl(h.pageUrl || h.imageUrl)
+    }));
+
+    const suspicious = results.filter(r => r.risk === 'suspicious');
+    const unknown    = results.filter(r => r.risk === 'unknown');
+    const safe       = results.filter(r => r.risk === 'safe');
+    const totalFound = results.length;
+    const riskLevel  = suspicious.length > 0 ? 'HIGH'
+                     : unknown.length > 3    ? 'MEDIUM'
+                     : totalFound === 0      ? 'NONE'
+                     : 'LOW';
+
+    const fingerprint = require('crypto').createHash('sha256').update(fileBuf).digest('hex');
+
+    jsonRes(res, 200, {
+      ok: true,
+      hasBingSearch: !!BING_KEY,
+      hasGVSearch:   !!GV_API_KEY,
+      fingerprint, totalFound, riskLevel,
+      suspicious, unknown, safe,
+      manualLinks: {
+        google:  'https://images.google.com/',
+        yandex:  'https://yandex.com/images/',
+        tineye:  'https://tineye.com/',
+        pimeyes: 'https://pimeyes.com/en',
+      }
+    });
+  } catch(e) {
+    console.error('[얼굴탐색] 예외:', e.message);
+    jsonRes(res, 500, { ok: false, error: '서버 오류: ' + e.message });
   }
 }
 
@@ -2246,6 +2394,7 @@ const server = http.createServer((req, res) => {
 
   // ── 얼굴 API ────────────────────────────────────────────
   if (req.method==='POST' && p.pathname==='/api/face/register')   return handleFaceRegister(req, res);
+  if (req.method === 'POST' && p.pathname === '/api/face/search')     return handleFaceSearch(req, res);
   if (req.method==='GET'  && p.pathname==='/api/face/descriptor') return handleFaceDescriptor(req, res);
 
   // ── 대시보드 / 모니터링 API ──────────────────────────────
