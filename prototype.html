@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Unveil Protocol — Interactive Prototype</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #080C14;
+      --surface:   #0D1220;
+      --surface2:  #111827;
+      --border:    #1E2A3A;
+      --border2:   #243044;
+      --green:     #00E5A0;
+      --green-dim: rgba(0,229,160,.12);
+      --red:       #FF4560;
+      --red-dim:   rgba(255,69,96,.12);
+      --gold:      #F5C518;
+      --gold-dim:  rgba(245,197,24,.10);
+      --blue:      #3B82F6;
+      --text:      #E2E8F0;
+      --muted:     #64748B;
+      --muted2:    #94A3B8;
+      --font:      'Inter', sans-serif;
+      --mono:      'JetBrains Mono', monospace;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      overflow: hidden;
+    }
+
+    /* ── Screen System ───────────────────────────────── */
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(40px);
+      transition: opacity .35s ease, transform .35s ease;
+    }
+    .screen.active {
+      opacity: 1;
+      pointer-events: all;
+      transform: translateX(0);
+    }
+    .screen.exit {
+      opacity: 0;
+      transform: translateX(-40px);
+    }
+
+    /* ── Top Navigation ──────────────────────────────── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 32px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-icon {
+      width: 28px; height: 28px;
+      background: var(--green);
+      clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+    }
+    .logo-text {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      color: #fff;
+    }
+    .logo-sub {
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 400;
+      margin-left: 2px;
+    }
+    .nav-pill {
+      display: flex;
+      gap: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 4px;
+    }
+    .nav-step {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 5px 14px;
+      border-radius: 5px;
+      color: var(--muted);
+      cursor: default;
+      transition: all .2s;
+    }
+    .nav-step.done { color: var(--green); }
+    .nav-step.current {
+      background: var(--green);
+      color: #000;
+      font-weight: 700;
+    }
+    .status-dot {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted2);
+      font-family: var(--mono);
+    }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+    .dot.pulse { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
+    /* ── Buttons ─────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 28px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      border: none;
+      font-family: var(--font);
+    }
+    .btn-primary {
+      background: var(--green);
+      color: #000;
+    }
+    .btn-primary:hover { background: #00ffb3; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,229,160,.3); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted2);
+      border: 1px solid var(--border2);
+    }
+    .btn-ghost:hover { border-color: var(--muted2); color: var(--text); }
+    .btn-danger {
+      background: var(--red-dim);
+      color: var(--red);
+      border: 1px solid rgba(255,69,96,.3);
+    }
+    .btn-danger:hover { background: rgba(255,69,96,.2); }
+
+    /* ── Cards ───────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .card-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    /* ══════════════════════════════════════════════════
+       SCREEN 0 — LANDING
+    ══════════════════════════════════════════════════ */
+    #s0 {
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0,229,160,.06) 0%, transparent 70%), var(--bg);
+    }
+    .landing-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      max-width: 1100px;
+      width: 90%;
+      align-items: center;
+    }
+    .landing-eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--green);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .landing-eyebrow::before {
+      content: '';
+      display: block;
+      width: 24px;
+      height: 1px;
+      background: var(--green);
+    }
+    .landing-title {
+      font-size: 52px;
+      font-weight: 900;
+      line-height: 1.08;
+      letter-spacing: -.02em;
+      color: #fff;
+      margin-bottom: 20px;
+    }
+    .landing-title span { color: var(--green); }
+    .landing-desc {
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--muted2);
+      margin-bottom: 36px;
+      max-width: 440px;
+    }
+    .landing-ctas {
+      display: flex;
+      gap: 12px;
+    }
+    .landing-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 48px;
+    }
+    .stat-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+    }
+    .stat-value {
+      font-size: 26px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .stat-value.green { color: var(--green); }
+    .stat-value.gold  { color: var(--gold); }
+    .stat-label { font-size: 11px; color: var(--muted); }
+
+    /* Landing right: visual */
+    .landing-visual {
+      position: relative;
+    }
+    .lv-screen {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .lv-screen::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--green), transparent);
+    }
+    .lv-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-family: var(--mono);
+      padding: 5px 10px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+    }
+    .lv-chip.ok  { background: var(--green-dim); color: var(--green); border: 1px solid rgba(0,229,160,.25); }
+    .lv-chip.bad { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(255,69,96,.25); }
+    .lv-chip.wait{ background: var(--gold-dim);  color: var(--gold);  border: 1px solid rgba(245,197,24,.25); }
+    .lv-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .lv-row:last-child { border: none; }
+    .lv-row-label { color: var(--muted); }
+    .lv-row-val { font-family: var(--mono); font-size: 11px; color: var(--text); font-weight: 600; }
+    .lv-bar-wrap {
+      margin-top: 18px;
+      background: var(--border);
+      border-radius: 4px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .lv-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--green), #00b8d9);
+      border-radius: 4px;
+      animation: barfill 2s ease-out forwards;
+    }
+    @keyframes barfill { from{width:0} to{width:97.8%} }
+    .lv-float {
+      position: absolute;
+      right: -20px;
+      bottom: 60px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 11px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    }
+    .lv-float-title { font-size: 10px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .08em; }
+    .lv-float-hash { font-family: var(--mono); font-size: 10px; color: var(--green); word-break: break-all; }
+
+    /* ══════════════════════════════════════════════════
+       SCREEN 1 — UPLOAD
+    ══════════════════════════════════════════════════ */
+    #s1 .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+    .upload-title {
+      font-size: 28px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .upload-sub {
+      font-size: 14px;
+      color: var(--muted2);
+      margin-bottom: 40px;
+      text-align: center;
+    }
+    .upload-zone {
+      width: 100%;
+      max-width: 600px;
+      border: 2px dashed var(--border2);
+      border-radius: 16px;
+      padding: 60px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      cursor: pointer;
+      transition: all .2s;
+      background: var(--surface);
+      position: relative;
+      overflow: hidden;
+    }
+    .upload-zone:hover, .upload-zone.drag {
+      border-color: var(--green);
+      background: var(--green-dim);
+    }
+    .upload-icon {
+      width: 64px; height: 64px;
+      border-radius: 16px;
+      background: var(--green-dim);
+      border: 1px solid rgba(0,229,160,.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+    }
+    .upload-zone-title { font-size: 16px; font-weight: 600; color: #fff; }
+    .upload-zone-sub { font-size: 13px; color: var(--muted); text-align: center; }
+    .upload-types {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .type-tag {
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 4px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted2);
+      font-family: var(--mono);
+    }
+    .upload-demos {
+      display: flex;
+      gap: 12px;
+      margin-top: 32px;
+    }
+    .demo-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 18px;
+      cursor: pointer;
+      transition: all .2s;
+      text-align: center;
+      min-width: 130px;
+    }
+    .demo-card:hover { border-color: var(--green); background: var(--green-dim); }
+    .demo-card-icon { font-size: 24px; margin-bottom: 8px; }
+    .demo-card-label { font-size: 12px; font-weight: 600; color: var(--text); }
+    .demo-card-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .demo-card.selected { border-color: var(--green); background: var(--green-dim); }
+
+    /* ══════════════════════════════════════════════════
+       SCREEN 2 — ANALYZING
+    ══════════════════════════════════════════════════ */
+    #s2 .content {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 24px;
+      padding: 24px 32px;
+      overflow: hidden;
+    }
+    .analyze-main {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .file-preview {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0;
+      overflow: hidden;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .file-preview-bar {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .dot3 { display:flex;gap:5px; }
+    .dot3 span { width:10px;height:10px;border-radius:50%; }
+    .preview-body {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      background: #050810;
+    }
+    .preview-img-wrap {
+      position: relative;
+      width: 320px;
+      height: 240px;
+    }
+    .preview-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 4px;
+      opacity: .7;
+      background: linear-gradient(135deg, #1a2035 0%, #0d1220 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 64px;
+      border-radius: 4px;
+    }
+    .scan-line {
+      position: absolute;
+      left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--green), transparent);
+      animation: scan 2s linear infinite;
+      box-shadow: 0 0 8px var(--green);
+    }
+    @keyframes scan { from{top:0} to{top:100%} }
+    .corner {
+      position: absolute;
+      width: 20px; height: 20px;
+      border-color: var(--green);
+      border-style: solid;
+      opacity: .8;
+    }
+    .corner.tl { top:0;left:0;  border-width:2px 0 0 2px; }
+    .corner.tr { top:0;right:0; border-width:2px 2px 0 0; }
+    .corner.bl { bottom:0;left:0; border-width:0 0 2px 2px; }
+    .corner.br { bottom:0;right:0; border-width:0 2px 2px 0; }
+    .ai-engines {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .engine-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .engine-name { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+    .engine-status { font-size: 11px; color: var(--muted); margin-bottom: 10px; font-family: var(--mono); }
+    .engine-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .engine-fill { height: 100%; border-radius: 2px; transition: width 1.5s ease; }
+
+    .analyze-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .terminal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .terminal-bar {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 14px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .terminal-body {
+      flex: 1;
+      padding: 14px;
+      overflow-y: auto;
+      font-family: var(--mono);
+      font-size: 11px;
+      line-height: 1.8;
+    }
+    .t-line { display: flex; gap: 8px; animation: fadein .3s ease; }
+    .t-time { color: var(--muted); flex-shrink: 0; }
+    .t-msg { color: var(--muted2); }
+    .t-msg.ok { color: var(--green); }
+    .t-msg.warn { color: var(--gold); }
+    .t-msg.xrpl { color: #60a5fa; }
+    @keyframes fadein { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+    .xrpl-status {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .xrpl-row { display:flex; justify-content:space-between; font-size:11px; }
+    .xrpl-key { color: var(--muted); }
+    .xrpl-val { font-family: var(--mono); color: var(--text); font-weight: 600; }
+    .xrpl-val.g { color: var(--green); }
+    .xrpl-val.y { color: var(--gold); }
+
+    /* ══════════════════════════════════════════════════
+       SCREEN 3 — RESULT (FAKE)
+    ══════════════════════════════════════════════════ */
+    #s3 .content, #s4 .content {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      padding: 24px 32px;
+      overflow: hidden;
+    }
+    .result-left {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .verdict-banner {
+      border-radius: 12px;
+      padding: 28px;
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+    }
+    .verdict-banner.fake {
+      background: var(--red-dim);
+      border: 1px solid rgba(255,69,96,.3);
+    }
+    .verdict-banner.real {
+      background: var(--green-dim);
+      border: 1px solid rgba(0,229,160,.3);
+    }
+    .verdict-icon {
+      width: 52px; height: 52px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    .verdict-icon.fake { background: rgba(255,69,96,.2); }
+    .verdict-icon.real { background: rgba(0,229,160,.2); }
+    .verdict-title {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+    .verdict-title.fake { color: var(--red); }
+    .verdict-title.real { color: var(--green); }
+    .verdict-desc { font-size: 13px; color: var(--muted2); line-height: 1.6; }
+    .confidence-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 22px;
+    }
+    .conf-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .conf-title { font-size: 13px; font-weight: 600; color: var(--text); }
+    .conf-score {
+      font-size: 36px;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .conf-score.fake { color: var(--red); }
+    .conf-score.real { color: var(--green); }
+    .engines-result {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .er-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+    }
+    .er-name { width: 100px; color: var(--muted2); flex-shrink: 0; }
+    .er-bar-wrap { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+    .er-bar { height: 100%; border-radius: 3px; }
+    .er-bar.fake { background: linear-gradient(90deg, var(--red), #ff6b6b); }
+    .er-bar.real { background: linear-gradient(90deg, var(--green), #00b8d9); }
+    .er-val { width: 44px; text-align: right; font-family: var(--mono); font-size: 11px; color: var(--text); }
+    .action-strip {
+      display: flex;
+      gap: 10px;
+    }
+
+    .result-right {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .onchain-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      flex: 1;
+    }
+    .oc-header {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .oc-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted2); }
+    .oc-badge {
+      font-size: 10px;
+      font-family: var(--mono);
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: var(--green-dim);
+      color: var(--green);
+      border: 1px solid rgba(0,229,160,.2);
+    }
+    .oc-body { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+    .oc-field-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 5px; }
+    .oc-field-val {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text);
+      word-break: break-all;
+      line-height: 1.6;
+    }
+    .oc-field-val.green { color: var(--green); }
+    .oc-field-val.gold  { color: var(--gold); }
+    .oc-divider { height: 1px; background: var(--border); }
+    .oc-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .oc-meta-item {}
+    .oc-explorer-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 8px;
+      background: var(--green-dim);
+      border: 1px solid rgba(0,229,160,.25);
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      cursor: pointer;
+      transition: all .2s;
+      text-decoration: none;
+    }
+    .oc-explorer-btn:hover { background: rgba(0,229,160,.2); }
+
+    /* ══════════════════════════════════════════════════
+       SCREEN 5 — CERTIFICATE
+    ══════════════════════════════════════════════════ */
+    #s5 .content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: radial-gradient(ellipse 60% 60% at 50% 40%, rgba(0,229,160,.04) 0%, transparent 70%);
+    }
+    .cert-wrap {
+      max-width: 680px;
+      width: 100%;
+    }
+    .cert-card {
+      background: var(--surface);
+      border: 1px solid rgba(0,229,160,.3);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 0 60px rgba(0,229,160,.08);
+    }
+    .cert-header {
+      background: linear-gradient(135deg, #0d1a12 0%, #0d1220 100%);
+      border-bottom: 1px solid rgba(0,229,160,.2);
+      padding: 28px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .cert-title-block {}
+    .cert-eyebrow { font-size: 10px; letter-spacing: .15em; text-transform: uppercase; color: var(--green); margin-bottom: 6px; }
+    .cert-main-title { font-size: 22px; font-weight: 800; color: #fff; }
+    .cert-id { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .cert-seal {
+      width: 64px; height: 64px;
+      border: 2px solid rgba(0,229,160,.4);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+    }
+    .cert-body { padding: 28px 32px; }
+    .cert-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .cert-field {
+      padding: 14px 18px;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .cert-field:nth-child(2n) { border-right: none; }
+    .cert-field:nth-last-child(-n+2) { border-bottom: none; }
+    .cert-field-key { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 5px; }
+    .cert-field-val { font-size: 12px; font-weight: 600; color: var(--text); font-family: var(--mono); }
+    .cert-field-val.green { color: var(--green); }
+    .cert-field-val.gold  { color: var(--gold); }
+    .cert-hash-section { margin-bottom: 20px; }
+    .cert-hash-label { font-size: 11px; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .08em; }
+    .cert-hash-val {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--green);
+      background: var(--green-dim);
+      border: 1px solid rgba(0,229,160,.2);
+      border-radius: 8px;
+      padding: 12px 16px;
+      word-break: break-all;
+      line-height: 1.7;
+    }
+    .cert-footer {
+      border-top: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface2);
+    }
+    .cert-footer-brand { font-size: 11px; color: var(--muted); }
+    .cert-footer-brand strong { color: var(--green); }
+    .cert-actions { display: flex; gap: 10px; }
+
+    /* ── Scrollbar ──────────────────────────────── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 0 — LANDING
+══════════════════════════════════════════════════ -->
+<div class="screen active" id="s0">
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon"></div>
+      <div>
+        <span class="logo-text">UNVEIL</span>
+        <span class="logo-sub">PROTOCOL</span>
+      </div>
+    </div>
+    <div class="status-dot">
+      <div class="dot pulse"></div>
+      XRPL TESTNET · LIVE
+    </div>
+  </div>
+  <div style="flex:1;display:flex;align-items:center;justify-content:center;overflow:auto;padding:40px;">
+    <div class="landing-grid">
+      <div>
+        <div class="landing-eyebrow">Pre-Chain Verification Layer</div>
+        <h1 class="landing-title">Deepfake<br>Detection<br><span>on XRPL</span></h1>
+        <p class="landing-desc">
+          AI-powered content verification with immutable blockchain proof.
+          Every verdict is minted as an NFT on XRPL — tamper-proof,
+          court-admissible evidence under FRE §902.
+        </p>
+        <div class="landing-ctas">
+          <button class="btn btn-primary" onclick="goScreen(1)">▶ Try Demo</button>
+          <button class="btn btn-ghost" onclick="goScreen(5)">View Certificate</button>
+        </div>
+        <div class="landing-stats">
+          <div class="stat-box">
+            <div class="stat-value green">97.8%</div>
+            <div class="stat-label">AI Confidence Score</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value gold">24ms</div>
+            <div class="stat-label">XRPL Ledger Latency</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value" style="color:#fff">3</div>
+            <div class="stat-label">AI Engines (Ensemble)</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-value green">FRE §902</div>
+            <div class="stat-label">Legal Standard</div>
+          </div>
+        </div>
+      </div>
+      <div class="landing-visual">
+        <div class="lv-screen">
+          <div class="lv-chip ok">✓ tesSUCCESS · NFTokenMint</div>
+          <div class="lv-row">
+            <span class="lv-row-label">Transaction Type</span>
+            <span class="lv-row-val">NFTokenMint</span>
+          </div>
+          <div class="lv-row">
+            <span class="lv-row-label">Standard</span>
+            <span class="lv-row-val" style="color:var(--gold)">FRE_902 · SHA-256</span>
+          </div>
+          <div class="lv-row">
+            <span class="lv-row-label">Ledger</span>
+            <span class="lv-row-val">#16836468</span>
+          </div>
+          <div class="lv-row">
+            <span class="lv-row-label">Verdict</span>
+            <span class="lv-row-val" style="color:var(--red)">SYNTHETIC · FLAGGED</span>
+          </div>
+          <div class="lv-row">
+            <span class="lv-row-label">Processing</span>
+            <span class="lv-row-val">2.3s</span>
+          </div>
+          <div style="margin-top:18px;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:8px;">
+              <span>Confidence</span><span style="color:var(--green);font-family:var(--mono)">97.82%</span>
+            </div>
+            <div class="lv-bar-wrap"><div class="lv-bar"></div></div>
+          </div>
+        </div>
+        <div class="lv-float">
+          <div class="lv-float-title">TX Hash · On-Chain</div>
+          <div class="lv-float-hash">1C251E510A064842247884<br>978DEB1764D8C5827D2EC<br>3F1A2054A1490F329D97F</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 1 — UPLOAD
+══════════════════════════════════════════════════ -->
+<div class="screen" id="s1">
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon"></div>
+      <div><span class="logo-text">UNVEIL</span><span class="logo-sub"> PROTOCOL</span></div>
+    </div>
+    <div class="nav-pill">
+      <div class="nav-step current">① Upload</div>
+      <div class="nav-step">② Analyze</div>
+      <div class="nav-step">③ Result</div>
+      <div class="nav-step">④ Certificate</div>
+    </div>
+    <button class="btn btn-ghost" style="font-size:12px;padding:8px 16px" onclick="goScreen(0)">← Back</button>
+  </div>
+  <div class="content">
+    <h2 class="upload-title">Upload Content to Verify</h2>
+    <p class="upload-sub">Drag & drop a file or choose a demo scenario below</p>
+    <div class="upload-zone" id="dropZone"
+         onclick="document.getElementById('fileInput').click()"
+         ondragover="event.preventDefault();this.classList.add('drag')"
+         ondragleave="this.classList.remove('drag')"
+         ondrop="handleDrop(event)">
+      <input type="file" id="fileInput" accept="image/*,video/*,audio/*" style="display:none" onchange="handleFileSelect(this)">
+      <div class="upload-icon" id="uploadIcon">📁</div>
+      <div class="upload-zone-title" id="uploadTitle">Drop file here or click to browse</div>
+      <div class="upload-zone-sub" id="uploadSub">Supports images, video, and audio files</div>
+      <div class="upload-types" id="uploadTypes">
+        <span class="type-tag">.jpg</span>
+        <span class="type-tag">.png</span>
+        <span class="type-tag">.mp4</span>
+        <span class="type-tag">.mov</span>
+        <span class="type-tag">.mp3</span>
+        <span class="type-tag">.wav</span>
+        <span class="type-tag">.webm</span>
+      </div>
+    </div>
+    <div style="margin-top:16px;text-align:center;font-size:12px;color:var(--muted);">— or try a demo scenario —</div>
+    <div class="upload-demos">
+      <div class="demo-card" id="demoFake" onclick="selectDemo('fake')">
+        <div class="demo-card-icon">🎭</div>
+        <div class="demo-card-label">Deepfake Video</div>
+        <div class="demo-card-sub">Face-swap · synthetic</div>
+      </div>
+      <div class="demo-card" id="demoReal" onclick="selectDemo('real')">
+        <div class="demo-card-icon">✅</div>
+        <div class="demo-card-label">Authentic Image</div>
+        <div class="demo-card-sub">Camera-original · EXIF intact</div>
+      </div>
+      <div class="demo-card" id="demoAudio" onclick="selectDemo('audio')">
+        <div class="demo-card-icon">🎙️</div>
+        <div class="demo-card-label">Voice Clone</div>
+        <div class="demo-card-sub">AI-generated audio</div>
+      </div>
+    </div>
+    <div style="margin-top:28px;">
+      <button class="btn btn-primary" onclick="startAnalysis()" id="analyzeBtn">Analyze Content →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 2 — ANALYZING
+══════════════════════════════════════════════════ -->
+<div class="screen" id="s2">
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon"></div>
+      <div><span class="logo-text">UNVEIL</span><span class="logo-sub"> PROTOCOL</span></div>
+    </div>
+    <div class="nav-pill">
+      <div class="nav-step done">① Upload</div>
+      <div class="nav-step current">② Analyze</div>
+      <div class="nav-step">③ Result</div>
+      <div class="nav-step">④ Certificate</div>
+    </div>
+    <div class="status-dot"><div class="dot pulse"></div>Analyzing…</div>
+  </div>
+  <div class="content">
+    <div class="analyze-main">
+      <div class="file-preview">
+        <div class="file-preview-bar">
+          <div class="dot3">
+            <span style="background:#ff5f57"></span>
+            <span style="background:#febc2e"></span>
+            <span style="background:#28c840"></span>
+          </div>
+          <span style="font-size:12px;color:var(--muted);margin-left:8px;font-family:var(--mono)" id="analyzeFileName">deepfake_sample.mp4</span>
+        </div>
+        <div class="preview-body">
+          <div class="preview-img-wrap">
+            <div class="preview-img" id="previewEmoji">🎭</div>
+            <div class="scan-line"></div>
+            <div class="corner tl"></div>
+            <div class="corner tr"></div>
+            <div class="corner bl"></div>
+            <div class="corner br"></div>
+          </div>
+        </div>
+      </div>
+      <div class="ai-engines">
+        <div class="engine-card">
+          <div class="engine-name">Reality Defender</div>
+          <div class="engine-status" id="rdStatus">Connecting…</div>
+          <div class="engine-bar"><div class="engine-fill" id="rdFill" style="width:0%;background:linear-gradient(90deg,var(--green),#00b8d9)"></div></div>
+        </div>
+        <div class="engine-card">
+          <div class="engine-name">Hive Moderation</div>
+          <div class="engine-status" id="hiveStatus">Queued</div>
+          <div class="engine-bar"><div class="engine-fill" id="hiveFill" style="width:0%;background:linear-gradient(90deg,#a78bfa,#7c3aed)"></div></div>
+        </div>
+        <div class="engine-card">
+          <div class="engine-name">AI or Not</div>
+          <div class="engine-status" id="aionStatus">Queued</div>
+          <div class="engine-bar"><div class="engine-fill" id="aionFill" style="width:0%;background:linear-gradient(90deg,var(--gold),#f97316)"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="analyze-sidebar">
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="dot pulse" style="background:var(--green)"></div>
+          Transaction Log
+        </div>
+        <div class="terminal-body" id="termBody"></div>
+      </div>
+      <div class="xrpl-status">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted2);margin-bottom:4px;">XRPL Status</div>
+        <div class="xrpl-row">
+          <span class="xrpl-key">Network</span>
+          <span class="xrpl-val g">Testnet ✓</span>
+        </div>
+        <div class="xrpl-row">
+          <span class="xrpl-key">TX Type</span>
+          <span class="xrpl-val">NFTokenMint</span>
+        </div>
+        <div class="xrpl-row">
+          <span class="xrpl-key">Standard</span>
+          <span class="xrpl-val y">FRE_902</span>
+        </div>
+        <div class="xrpl-row">
+          <span class="xrpl-key">Status</span>
+          <span class="xrpl-val" id="xrplTxStatus">Pending…</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 3 — RESULT: FAKE
+══════════════════════════════════════════════════ -->
+<div class="screen" id="s3">
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon"></div>
+      <div><span class="logo-text">UNVEIL</span><span class="logo-sub"> PROTOCOL</span></div>
+    </div>
+    <div class="nav-pill">
+      <div class="nav-step done">① Upload</div>
+      <div class="nav-step done">② Analyze</div>
+      <div class="nav-step current">③ Result</div>
+      <div class="nav-step">④ Certificate</div>
+    </div>
+    <div class="status-dot"><div class="dot" style="background:var(--red)"></div>SYNTHETIC DETECTED</div>
+  </div>
+  <div class="content">
+    <div class="result-left">
+      <div class="verdict-banner fake">
+        <div class="verdict-icon fake">⚠</div>
+        <div>
+          <div class="verdict-title fake">Synthetic Content Detected</div>
+          <div class="verdict-desc">
+            This content has been flagged as AI-generated or manipulated.
+            The transaction has been <strong style="color:var(--red)">blocked</strong> and evidence
+            is immutably recorded on XRPL under FRE §902.
+          </div>
+        </div>
+      </div>
+      <div class="confidence-block">
+        <div class="conf-header">
+          <span class="conf-title">Ensemble AI Confidence</span>
+          <span class="conf-score fake">97.8%</span>
+        </div>
+        <div class="engines-result">
+          <div class="er-row">
+            <span class="er-name">Reality Defender</span>
+            <div class="er-bar-wrap"><div class="er-bar fake" style="width:98%"></div></div>
+            <span class="er-val">98.0%</span>
+          </div>
+          <div class="er-row">
+            <span class="er-name">Hive</span>
+            <div class="er-bar-wrap"><div class="er-bar fake" style="width:97%"></div></div>
+            <span class="er-val">97.1%</span>
+          </div>
+          <div class="er-row">
+            <span class="er-name">AI or Not</span>
+            <div class="er-bar-wrap"><div class="er-bar fake" style="width:98%"></div></div>
+            <span class="er-val">98.3%</span>
+          </div>
+        </div>
+      </div>
+      <div class="action-strip">
+        <button class="btn btn-danger" style="flex:1">⊘ Transaction Blocked</button>
+        <button class="btn btn-ghost" onclick="goScreen(5)">View NFT Certificate →</button>
+        <button class="btn btn-ghost" onclick="goScreen(1)">⟳ New</button>
+      </div>
+    </div>
+    <div class="result-right">
+      <div class="onchain-card">
+        <div class="oc-header">
+          <span class="oc-title">Live On-Chain Proof</span>
+          <span class="oc-badge">tesSUCCESS</span>
+        </div>
+        <div class="oc-body">
+          <div>
+            <div class="oc-field-label">Transaction Hash</div>
+            <div class="oc-field-val">1C251E510A064842247884978DEB1764D8C5827D2EC3F1A2054A1490F329D97F</div>
+          </div>
+          <div class="oc-divider"></div>
+          <div>
+            <div class="oc-field-label">NFT ID</div>
+            <div class="oc-field-val green">000800000E788F3DED5C66448A50F29C12F9885F2EE6290A92EF030C0100E772</div>
+          </div>
+          <div class="oc-divider"></div>
+          <div>
+            <div class="oc-field-label">Issuer Wallet</div>
+            <div class="oc-field-val">rpKWtJANeXF6C56FPN6ybftBdiAkEjKYre</div>
+          </div>
+          <div class="oc-divider"></div>
+          <div class="oc-meta-grid">
+            <div class="oc-meta-item">
+              <div class="oc-field-label">Standard</div>
+              <div class="oc-field-val gold">FRE_902</div>
+            </div>
+            <div class="oc-meta-item">
+              <div class="oc-field-label">Algorithm</div>
+              <div class="oc-field-val green">SHA-256</div>
+            </div>
+            <div class="oc-meta-item">
+              <div class="oc-field-label">Ledger</div>
+              <div class="oc-field-val">#16836468</div>
+            </div>
+            <div class="oc-meta-item">
+              <div class="oc-field-label">Fee</div>
+              <div class="oc-field-val">0.000012 XRP</div>
+            </div>
+          </div>
+          <a class="oc-explorer-btn" href="https://testnet.xrpl.org/transactions/1C251E510A064842247884978DEB1764D8C5827D2EC3F1A2054A1490F329D97F" target="_blank">
+            ↗ View on XRPL Explorer
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 4 — RESULT: AUTHENTIC
+══════════════════════════════════════════════════ -->
+<div class="screen" id="s4">
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon"></div>
+      <div><span class="logo-text">UNVEIL</span><span class="logo-sub"> PROTOCOL</span></div>
+    </div>
+    <div class="nav-pill">
+      <div class="nav-step done">① Upload</div>
+      <div class="nav-step done">② Analyze</div>
+      <div class="nav-step current">③ Result</div>
+      <div class="nav-step">④ Certificate</div>
+    </div>
+    <div class="status-dot"><div class="dot"></div>VERIFIED AUTHENTIC</div>
+  </div>
+  <div class="content">
+    <div class="result-left">
+      <div class="verdict-banner real">
+        <div class="verdict-icon real">✓</div>
+        <div>
+          <div class="verdict-title real">Authentic Content Verified</div>
+          <div class="verdict-desc">
+            This content has been verified as camera-original.
+            Settlement is <strong style="color:var(--green)">authorized</strong> and the authenticity
+            certificate is permanently recorded on XRPL.
+          </div>
+        </div>
+      </div>
+      <div class="confidence-block">
+        <div class="conf-header">
+          <span class="conf-title">Ensemble AI Confidence</span>
+          <span class="conf-score real">99.1%</span>
+        </div>
+        <div class="engines-result">
+          <div class="er-row">
+            <span class="er-name">Reality Defender</span>
+            <div class="er-bar-wrap"><div class="er-bar real" style="width:99%"></div></div>
+            <span class="er-val">99.0%</span>
+          </div>
+          <div class="er-row">
+            <span class="er-name">Hive</span>
+            <div class="er-bar-wrap"><div class="er-bar real" style="width:99%"></div></div>
+            <span class="er-val">99.2%</span>
+          </div>
+          <div class="er-row">
+            <span class="er-name">AI or Not</span>
+            <div class="er-bar-wrap"><div class="er-bar real" style="width:99%"></div></div>
+            <span class="er-val">99.1%</span>
+          </div>
+        </div>
+      </div>
+      <div class="action-strip">
+        <button class="btn btn-primary" style="flex:1">✓ Execute Settlement →</button>
+        <button class="btn btn-ghost" onclick="goScreen(5)">View NFT Certificate →</button>
+        <button class="btn btn-ghost" onclick="goScreen(1)">⟳ New</button>
+      </div>
+    </div>
+    <div class="result-right">
+      <div class="onchain-card">
+        <div class="oc-header">
+          <span class="oc-title">Live On-Chain Proof</span>
+          <span class="oc-badge">tesSUCCESS</span>
+        </div>
+        <div class="oc-body">
+          <div>
+            <div class="oc-field-label">Transaction Hash</div>
+            <div class="oc-field-val">1C251E510A064842247884978DEB1764D8C5827D2EC3F1A2054A1490F329D97F</div>
+          </div>
+          <div class="oc-divider"></div>
+          <div>
+            <div class="oc-field-label">NFT ID</div>
+            <div class="oc-field-val green">000800000E788F3DED5C66448A50F29C12F9885F2EE6290A92EF030C0100E772</div>
+          </div>
+          <div class="oc-divider"></div>
+          <div>
+            <div class="oc-field-label">Issuer Wallet</div>
+            <div class="oc-field-val">rpKWtJANeXF6C56FPN6ybftBdiAkEjKYre</div>
+          </div>
+          <div class="oc-divider"></div>
+          <div class="oc-meta-grid">
+            <div class="oc-meta-item">
+              <div class="oc-field-label">Standard</div>
+              <div class="oc-field-val gold">FRE_902</div>
+            </div>
+            <div class="oc-meta-item">
+              <div class="oc-field-label">Algorithm</div>
+              <div class="oc-field-val green">SHA-256</div>
+            </div>
+            <div class="oc-meta-item">
+              <div class="oc-field-label">Ledger</div>
+              <div class="oc-field-val">#16836468</div>
+            </div>
+            <div class="oc-meta-item">
+              <div class="oc-field-label">Fee</div>
+              <div class="oc-field-val">0.000012 XRP</div>
+            </div>
+          </div>
+          <a class="oc-explorer-btn" href="https://testnet.xrpl.org/transactions/1C251E510A064842247884978DEB1764D8C5827D2EC3F1A2054A1490F329D97F" target="_blank">
+            ↗ View on XRPL Explorer
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     SCREEN 5 — NFT CERTIFICATE
+══════════════════════════════════════════════════ -->
+<div class="screen" id="s5">
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-icon"></div>
+      <div><span class="logo-text">UNVEIL</span><span class="logo-sub"> PROTOCOL</span></div>
+    </div>
+    <div class="nav-pill">
+      <div class="nav-step done">① Upload</div>
+      <div class="nav-step done">② Analyze</div>
+      <div class="nav-step done">③ Result</div>
+      <div class="nav-step current">④ Certificate</div>
+    </div>
+    <button class="btn btn-ghost" style="font-size:12px;padding:8px 16px" onclick="goScreen(0)">← Home</button>
+  </div>
+  <div class="content">
+    <div class="cert-wrap">
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:13px;color:var(--muted2);margin-bottom:4px;">Blockchain Evidence Certificate</div>
+        <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">Issued · 2026-04-25 12:11:12 UTC</div>
+      </div>
+      <div class="cert-card">
+        <div class="cert-header">
+          <div class="cert-title-block">
+            <div class="cert-eyebrow">Unveil Protocol · XRPL Testnet</div>
+            <div class="cert-main-title">AI Verification Certificate</div>
+            <div class="cert-id">NFT ID: 000800000E788F3D…0100E772</div>
+          </div>
+          <div class="cert-seal">🛡️</div>
+        </div>
+        <div class="cert-body">
+          <div class="cert-grid">
+            <div class="cert-field">
+              <div class="cert-field-key">Verdict</div>
+              <div class="cert-field-val" style="color:var(--red)">SYNTHETIC · FLAGGED</div>
+            </div>
+            <div class="cert-field">
+              <div class="cert-field-key">Confidence</div>
+              <div class="cert-field-val green">97.82%</div>
+            </div>
+            <div class="cert-field">
+              <div class="cert-field-key">Standard</div>
+              <div class="cert-field-val gold">FRE §902 · SHA-256</div>
+            </div>
+            <div class="cert-field">
+              <div class="cert-field-key">Provider</div>
+              <div class="cert-field-val green">Unveil Protocol</div>
+            </div>
+            <div class="cert-field">
+              <div class="cert-field-key">Ledger Index</div>
+              <div class="cert-field-val">#16836468</div>
+            </div>
+            <div class="cert-field">
+              <div class="cert-field-key">TX Fee</div>
+              <div class="cert-field-val">0.000012 XRP</div>
+            </div>
+          </div>
+          <div class="cert-hash-section">
+            <div class="cert-hash-label">Transaction Hash (immutable on-chain record)</div>
+            <div class="cert-hash-val">
+              1C251E510A064842247884978DEB1764D8C5827D<br>
+              2EC3F1A2054A1490F329D97F
+            </div>
+          </div>
+          <div class="cert-hash-section">
+            <div class="cert-hash-label">NFT Token ID</div>
+            <div class="cert-hash-val" style="color:var(--green)">
+              000800000E788F3DED5C66448A50F29C12F9885F<br>
+              2EE6290A92EF030C0100E772
+            </div>
+          </div>
+        </div>
+        <div class="cert-footer">
+          <div class="cert-footer-brand">
+            Powered by <strong>Reality Defender · Hive · AI or Not</strong><br>
+            <span style="font-size:10px;">Anchored on <strong>XRPL</strong> via NFTokenMint + Memo (FRE_902)</span>
+          </div>
+          <div class="cert-actions">
+            <a href="https://testnet.xrpl.org/transactions/1C251E510A064842247884978DEB1764D8C5827D2EC3F1A2054A1490F329D97F" target="_blank" class="btn btn-ghost" style="font-size:11px;padding:8px 16px">↗ XRPL Explorer</a>
+            <button class="btn btn-primary" style="font-size:11px;padding:8px 16px" onclick="goScreen(1)">+ New Analysis</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ── State ─────────────────────────────────────── */
+  let currentScreen = 0;
+  let selectedDemo  = 'fake';
+  let analyzeTimer  = null;
+
+  /* ── Navigation ─────────────────────────────────── */
+  function goScreen(n) {
+    const cur = document.getElementById('s' + currentScreen);
+    const nxt = document.getElementById('s' + n);
+    cur.classList.remove('active');
+    cur.classList.add('exit');
+    setTimeout(() => cur.classList.remove('exit'), 400);
+    nxt.classList.add('active');
+    currentScreen = n;
+  }
+
+  /* ── Upload Demo ────────────────────────────────── */
+  function selectDemo(type) {
+    selectedDemo = type;
+    ['demoFake','demoReal','demoAudio'].forEach(id => document.getElementById(id).classList.remove('selected'));
+    const map = { fake:'demoFake', real:'demoReal', audio:'demoAudio' };
+    document.getElementById(map[type]).classList.add('selected');
+  }
+
+  /* ── File Upload Handling ───────────────────────── */
+  function handleFileSelect(input) {
+    const file = input.files[0];
+    if (!file) return;
+    processFile(file);
+  }
+
+  function handleDrop(event) {
+    event.preventDefault();
+    document.getElementById('dropZone').classList.remove('drag');
+    const file = event.dataTransfer.files[0];
+    if (!file) return;
+    processFile(file);
+  }
+
+  function processFile(file) {
+    const name = file.name;
+    const ext  = name.split('.').pop().toLowerCase();
+    const size  = (file.size / 1024 / 1024).toFixed(1) + ' MB';
+
+    // Detect type from extension
+    const videoExts = ['mp4','mov','avi','webm','mkv'];
+    const audioExts = ['mp3','wav','ogg','flac','m4a'];
+    if (videoExts.includes(ext))      selectedDemo = 'fake';
+    else if (audioExts.includes(ext)) selectedDemo = 'audio';
+    else                              selectedDemo = 'real';
+
+    // Update upload zone UI
+    const zone = document.getElementById('dropZone');
+    zone.style.borderColor = 'var(--green)';
+    zone.style.background  = 'var(--green-dim)';
+    document.getElementById('uploadIcon').textContent  = '✅';
+    document.getElementById('uploadTitle').textContent = name;
+    document.getElementById('uploadSub').textContent   = size + ' · Ready to analyze';
+    document.getElementById('uploadTypes').style.display = 'none';
+
+    // Override file name in analysis screen
+    FILE_MAP['_real']  = name;
+    FILE_MAP['real']   = name;
+    FILE_MAP['fake']   = name;
+    FILE_MAP['audio']  = name;
+
+    // Auto-proceed after short delay
+    setTimeout(() => startAnalysis(), 800);
+  }
+
+  /* ── Analysis Simulation ────────────────────────── */
+  const LOGS = {
+    fake: [
+      { t:'16:43:01', m:'XRPL Node Sync → Connection Established', c:'xrpl' },
+      { t:'16:43:01', m:'AI Engine → Requesting Reality Defender…', c:'' },
+      { t:'16:43:02', m:'Reality Defender → deepfake_score: 0.98', c:'ok' },
+      { t:'16:43:02', m:'Hive Moderation → ai_generated: true', c:'ok' },
+      { t:'16:43:03', m:'AI or Not → verdict: FAKE (0.983)', c:'ok' },
+      { t:'16:43:03', m:'Ensemble → SYNTHETIC · 97.82% confidence', c:'warn' },
+      { t:'16:43:04', m:'XRPL → Building NFTokenMint object…', c:'xrpl' },
+      { t:'16:43:05', m:'XRPL → Attaching Memo: FRE_902 / SHA-256', c:'xrpl' },
+      { t:'16:43:06', m:'XRPL → Submitting to Ledger #16836468…', c:'xrpl' },
+      { t:'16:43:07', m:'XRPL → tesSUCCESS ✓', c:'ok' },
+      { t:'16:43:07', m:'System → Execution HALTED (Freeze Triggered)', c:'warn' },
+    ],
+    real: [
+      { t:'16:43:01', m:'XRPL Node Sync → Connection Established', c:'xrpl' },
+      { t:'16:43:01', m:'AI Engine → Requesting Reality Defender…', c:'' },
+      { t:'16:43:02', m:'Reality Defender → authentic_score: 0.99', c:'ok' },
+      { t:'16:43:02', m:'Hive Moderation → ai_generated: false', c:'ok' },
+      { t:'16:43:03', m:'AI or Not → verdict: REAL (0.991)', c:'ok' },
+      { t:'16:43:03', m:'Ensemble → AUTHENTIC · 99.1% confidence', c:'ok' },
+      { t:'16:43:04', m:'XRPL → Building NFTokenMint object…', c:'xrpl' },
+      { t:'16:43:05', m:'XRPL → Attaching Memo: FRE_902 / SHA-256', c:'xrpl' },
+      { t:'16:43:06', m:'XRPL → Submitting to Ledger #16836468…', c:'xrpl' },
+      { t:'16:43:07', m:'XRPL → tesSUCCESS ✓', c:'ok' },
+      { t:'16:43:07', m:'System → Settlement Trigger AUTHORIZED ✓', c:'ok' },
+    ],
+    audio: [
+      { t:'16:43:01', m:'XRPL Node Sync → Connection Established', c:'xrpl' },
+      { t:'16:43:01', m:'AI Engine → Requesting voice analysis…', c:'' },
+      { t:'16:43:02', m:'Reality Defender → voice_clone_score: 0.96', c:'ok' },
+      { t:'16:43:02', m:'Hive Moderation → synthetic_voice: true', c:'ok' },
+      { t:'16:43:03', m:'AI or Not → verdict: FAKE AUDIO (0.962)', c:'ok' },
+      { t:'16:43:03', m:'Ensemble → SYNTHETIC VOICE · 96.2%', c:'warn' },
+      { t:'16:43:04', m:'XRPL → Building NFTokenMint object…', c:'xrpl' },
+      { t:'16:43:05', m:'XRPL → Attaching Memo: FRE_902 / SHA-256', c:'xrpl' },
+      { t:'16:43:06', m:'XRPL → Submitting to Ledger #16836468…', c:'xrpl' },
+      { t:'16:43:07', m:'XRPL → tesSUCCESS ✓', c:'ok' },
+      { t:'16:43:07', m:'System → Execution HALTED (Voice Clone Blocked)', c:'warn' },
+    ]
+  };
+
+  const FILE_MAP = { fake:'deepfake_sample.mp4', real:'authentic_photo.jpg', audio:'voice_clone.mp3' };
+  const EMOJI_MAP = { fake:'🎭', real:'📸', audio:'🎙️' };
+
+  function startAnalysis() {
+    const logs = LOGS[selectedDemo];
+    const isFake = selectedDemo !== 'real';
+
+    // setup screen 2
+    document.getElementById('analyzeFileName').textContent = FILE_MAP[selectedDemo];
+    document.getElementById('previewEmoji').textContent    = EMOJI_MAP[selectedDemo];
+    document.getElementById('rdStatus').textContent    = 'Connecting…';
+    document.getElementById('hiveStatus').textContent  = 'Queued';
+    document.getElementById('aionStatus').textContent  = 'Queued';
+    document.getElementById('rdFill').style.width      = '0%';
+    document.getElementById('hiveFill').style.width    = '0%';
+    document.getElementById('aionFill').style.width    = '0%';
+    document.getElementById('xrplTxStatus').textContent = 'Pending…';
+    document.getElementById('xrplTxStatus').style.color = 'var(--muted2)';
+    document.getElementById('termBody').innerHTML = '';
+
+    goScreen(2);
+
+    // engine animation
+    setTimeout(() => {
+      document.getElementById('rdStatus').textContent   = 'Scanning…';
+      animateBar('rdFill', 98, 1200);
+    }, 400);
+    setTimeout(() => {
+      document.getElementById('hiveStatus').textContent = 'Scanning…';
+      animateBar('hiveFill', 97, 1000);
+    }, 900);
+    setTimeout(() => {
+      document.getElementById('aionStatus').textContent = 'Scanning…';
+      animateBar('aionFill', 98, 900);
+    }, 1400);
+    setTimeout(() => {
+      document.getElementById('rdStatus').textContent   = 'Complete ✓';
+      document.getElementById('hiveStatus').textContent = 'Complete ✓';
+      document.getElementById('aionStatus').textContent = 'Complete ✓';
+    }, 2800);
+
+    // terminal logs
+    logs.forEach((log, i) => {
+      setTimeout(() => addTermLine(log.t, log.m, log.c), i * 320 + 200);
+    });
+
+    // XRPL status update
+    setTimeout(() => {
+      const el = document.getElementById('xrplTxStatus');
+      el.textContent = 'tesSUCCESS ✓';
+      el.style.color = 'var(--green)';
+    }, logs.length * 320 + 100);
+
+    // go to result
+    const resultScreen = isFake ? 3 : 4;
+    setTimeout(() => goScreen(resultScreen), logs.length * 320 + 700);
+  }
+
+  function animateBar(id, pct, dur) {
+    const el  = document.getElementById(id);
+    const fps = 30;
+    const n   = Math.round(dur / (1000 / fps));
+    let frame = 0;
+    const iv  = setInterval(() => {
+      frame++;
+      el.style.width = (pct * frame / n) + '%';
+      if (frame >= n) clearInterval(iv);
+    }, 1000 / fps);
+  }
+
+  function addTermLine(time, msg, cls) {
+    const body = document.getElementById('termBody');
+    const line = document.createElement('div');
+    line.className = 't-line';
+    line.innerHTML = `<span class="t-time">[${time}]</span><span class="t-msg ${cls}">${msg}</span>`;
+    body.appendChild(line);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  /* ── Demo card default selection ───────────────── */
+  document.getElementById('demoFake').classList.add('selected');
+</script>
+</body>
+</html>
