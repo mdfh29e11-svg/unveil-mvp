@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Unveil Protocol: XRPL-SOC Demo</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { margin: 0; background: #0A0E17; }
+    .fade-in  { animation: fadeIn  0.3s ease-out forwards; }
+    .slide-up { animation: slideUp 0.5s ease-out forwards; }
+    .animate-progress { animation: progress 2.5s linear forwards; }
+    @keyframes fadeIn  { from { opacity:0; transform:translateX(-10px); } to { opacity:1; transform:translateX(0); } }
+    @keyframes slideUp { from { transform:translateY(30px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+    @keyframes progress { from { width:0%; } to { width:100%; } }
+    ::-webkit-scrollbar { width:4px; }
+    ::-webkit-scrollbar-track { background:#0D121D; }
+    ::-webkit-scrollbar-thumb { background:#1E2533; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    const DATA = {
+      confidence:     97.82,
+      latency:        "24ms",
+      txHash:         "1C251E510A064842247884978DEB1764D8C5827D2EC3F1A2054A1490F329D97F",
+      nftId:          "000800000E788F3DED5C66448A50F29C12F9885F2EE6290A92EF030C0100E772",
+      ledgerIndex:    "#16836468",
+      processingTime: "2.3s",
+      timestamp:      "2026-04-25 12:11:12 UTC",
+      memos:          "AI_VERIFICATION_PROOF_SHA256",
+      walletAddress:  "rpKWtJANeXF6C56FPN6ybftBdiAkEjKYre",
+    };
+
+    const EXPLORER = `https://testnet.xrpl.org/transactions/${DATA.txHash}`;
+
+    function UnveilDashboard() {
+      const [logs,        setLogs]        = useState([]);
+      const [showVerdict, setShowVerdict] = useState(false);
+      const [isAnalyzing, setIsAnalyzing] = useState(false);
+      const [isFake,      setIsFake]      = useState(true);
+
+      const fullLogs = [
+        `[16:43:01] XRPL Node Sync → Connection Established`,
+        `[16:43:02] AI Engine → Pattern Integrity Check...`,
+        isFake
+          ? `[16:43:03] Status → FLAGGED AS SYNTHETIC`
+          : `[16:43:03] Status → VERIFIED AUTHENTIC`,
+        `[16:43:04] XRPL → Creating NFTokenMint Transaction Object...`,
+        `[16:43:05] XRPL → Attaching Memo: ${DATA.memos}`,
+        `[16:43:06] XRPL → Submitting to Ledger ${DATA.ledgerIndex}...`,
+        isFake
+          ? `[16:43:07] System → Execution Halted (Freeze Triggered)`
+          : `[16:43:07] System → Settlement Trigger Authorized`,
+        `[16:43:08] XRPL → NFT ID: ${DATA.nftId.slice(0,20)}...`,
+        `[16:43:09] XRPL → TxHash: ${DATA.txHash.slice(0,20)}...`,
+      ];
+
+      const handleSettlementClick = () => {
+        window.open(EXPLORER, '_blank');
+      };
+
+      const startAnalysis = () => {
+        setIsAnalyzing(true);
+        setLogs([]);
+        setShowVerdict(false);
+        fullLogs.forEach((log, index) => {
+          setTimeout(() => {
+            setLogs(prev => [...prev, log]);
+            if (index === fullLogs.length - 1) {
+              setTimeout(() => setShowVerdict(true), 500);
+            }
+          }, (index + 1) * 380);
+        });
+      };
+
+      const resetDemo = () => {
+        setLogs([]);
+        setShowVerdict(false);
+        setIsAnalyzing(false);
+      };
+
+      return (
+        <div className="min-h-screen bg-[#0A0E17] text-[#00FFAA] font-mono p-4 overflow-hidden">
+
+          {/* ── Header ── */}
+          <div className="flex justify-between items-center mb-4 border-b border-[#1E2533] pb-3">
+            <div className="flex items-center gap-4">
+              <h1 className="text-lg font-bold tracking-tighter uppercase italic">
+                Unveil Protocol: XRPL-SOC
+              </h1>
+              <button
+                onClick={() => { setIsFake(!isFake); resetDemo(); }}
+                className={`text-[9px] px-2 py-1 border transition-all ${
+                  isFake ? 'border-red-500 text-red-500' : 'border-[#00FFAA] text-[#00FFAA]'
+                }`}
+              >
+                TEST MODE: {isFake ? 'DEEPFAKE DETECTED' : 'AUTHENTIC CONTENT'}
+              </button>
+            </div>
+            <div className="flex gap-4 text-[9px] uppercase tracking-widest items-center">
+              <span className={isFake ? 'text-red-400 animate-pulse' : 'text-[#00FFAA]'}>
+                ● XRPL TESTNET
+              </span>
+              <span className="text-[#FFD700]">System: Active</span>
+            </div>
+          </div>
+
+          {/* ── Stats Bar ── */}
+          <div className="grid grid-cols-5 gap-3 mb-4">
+            {[
+              { label: 'AI Confidence',    value: `${DATA.confidence}%`, color: 'text-[#00FFAA]' },
+              { label: 'Latency',          value: DATA.latency,          color: 'text-[#FFD700]' },
+              { label: 'Processing Time',  value: DATA.processingTime,   color: 'text-[#00FFAA]' },
+              { label: 'Ledger Index',     value: DATA.ledgerIndex,      color: 'text-[#FFD700]' },
+              { label: 'Timestamp (UTC)',  value: DATA.timestamp.split(' ')[1], color: 'text-[#00FFAA]' },
+            ].map((s, i) => (
+              <div key={i} className="border border-[#1E2533] bg-[#0D121D] p-3">
+                <p className="text-[8px] text-gray-500 uppercase tracking-wider mb-1">{s.label}</p>
+                <p className={`text-sm font-black ${s.color}`}>{s.value}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* ── Main Grid ── */}
+          <div className="grid grid-cols-3 gap-4" style={{height:'62vh'}}>
+
+            {/* Left: Terminal Log */}
+            <div className="border border-[#1E2533] bg-[#0D121D] flex flex-col overflow-hidden">
+              <div className="bg-[#1E2533] px-3 py-1.5 text-[9px] uppercase font-bold text-gray-400 flex justify-between">
+                <span>Transaction & Analysis Terminal</span>
+                <span className="text-[#00FFAA]">{logs.length}/{fullLogs.length}</span>
+              </div>
+              <div className="p-3 text-[10px] space-y-1.5 overflow-y-auto flex-1">
+                {logs.length === 0 && (
+                  <p className="text-gray-600 italic text-[9px]">Awaiting authorization...</p>
+                )}
+                {logs.map((log, i) => (
+                  <p key={i} className={`fade-in ${
+                    log.includes('XRPL') ? 'text-[#FFD700]' :
+                    log.includes('FLAGGED') ? 'text-red-500 font-bold' :
+                    log.includes('AUTHENTIC') ? 'text-[#00FFAA] font-bold' : ''
+                  }`}>
+                    {log}
+                  </p>
+                ))}
+              </div>
+            </div>
+
+            {/* Center: Main Action */}
+            <div className="col-span-1 border border-dashed border-[#1E2533]/60 flex flex-col items-center justify-center relative">
+              {!isAnalyzing ? (
+                <div className="text-center">
+                  <p className="text-[9px] text-gray-600 mb-6 uppercase tracking-widest">
+                    XRPL NFT Verification System
+                  </p>
+                  <button
+                    onClick={startAnalysis}
+                    className="px-8 py-5 border border-[#FFD700] text-[#FFD700] uppercase tracking-[0.25em] font-black text-[11px] hover:bg-[#FFD700] hover:text-black transition-all"
+                  >
+                    [ AUTHORIZE XRPL TRANSACTION ]
+                  </button>
+                  <p className="text-[8px] text-gray-600 mt-4">
+                    Mint NFT · Attach FRE_902 Memo · Record on-chain
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center w-full max-w-xs px-4">
+                  <div className="w-full h-[2px] bg-[#1E2533] mb-4 overflow-hidden">
+                    <div className={`h-full animate-progress ${isFake ? 'bg-red-500' : 'bg-[#00FFAA]'}`}></div>
+                  </div>
+                  <p className="text-[10px] animate-pulse font-black uppercase tracking-widest">
+                    Validating with XRPL Ledger...
+                  </p>
+                </div>
+              )}
+
+              {/* ── Verdict Overlay ── */}
+              {showVerdict && (
+                <div className="absolute inset-0 flex items-center justify-center bg-[#0A0E17]/90 backdrop-blur-sm z-50 p-4">
+                  <div className={`bg-[#0D121D] border-2 p-6 w-full slide-up ${
+                    isFake
+                      ? 'border-red-500 shadow-[0_0_40px_rgba(255,0,0,0.2)]'
+                      : 'border-[#00FFAA] shadow-[0_0_40px_rgba(0,255,170,0.2)]'
+                  }`}>
+                    <h2 className={`text-base font-black uppercase mb-4 ${isFake ? 'text-red-500' : 'text-[#00FFAA]'}`}>
+                      {isFake ? '⚠ Synthetic Content Detected' : '✓ Authentic Content Verified'}
+                    </h2>
+
+                    <div className="space-y-2 mb-4 border-b border-[#1E2533] pb-4 text-[10px]">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">TX Type</span>
+                        <span className="text-white font-bold">NFTokenMint</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Ledger</span>
+                        <span className="text-white font-bold">{DATA.ledgerIndex}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Standard</span>
+                        <span className="text-[#FFD700] font-bold">FRE_902 · SHA-256</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Provider</span>
+                        <span className="text-[#00FFAA] font-bold">Unveil Protocol</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">NFT ID</span>
+                        <span className="text-gray-300 font-mono text-[8px]">{DATA.nftId.slice(0,18)}...</span>
+                      </div>
+                    </div>
+
+                    <div className={`border-l-4 p-3 mb-4 text-[9px] ${
+                      isFake ? 'bg-red-500/10 border-red-500' : 'bg-[#00FFAA]/10 border-[#00FFAA]'
+                    }`}>
+                      <p className="font-black uppercase leading-tight">
+                        {isFake
+                          ? 'Transaction blocked before value transfer'
+                          : 'Value flow authorized across XRPL network'}
+                      </p>
+                      <p className="text-gray-400 mt-1 italic text-[8px]">
+                        "Immutably stored on XRPL via NFTokenMint + Memo fields."
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSettlementClick}
+                        className={`flex-1 border-2 py-3 text-[10px] font-black uppercase tracking-[0.15em] transition-all ${
+                          isFake
+                            ? 'border-red-500 text-red-500 hover:bg-red-500 hover:text-white'
+                            : 'border-[#00FFAA] text-[#00FFAA] hover:bg-[#00FFAA] hover:text-black'
+                        }`}
+                      >
+                        {isFake ? 'VERIFY EVIDENCE ON-CHAIN ↗' : 'EXECUTE SETTLEMENT ↗'}
+                      </button>
+                      <button
+                        onClick={resetDemo}
+                        className="border border-[#1E2533] text-gray-500 px-3 text-[9px] hover:border-gray-500 transition-all"
+                      >
+                        RESET
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right: On-chain Info */}
+            <div className="border border-[#1E2533] bg-[#0D121D] flex flex-col">
+              <div className="bg-[#1E2533] px-3 py-1.5 text-[9px] uppercase font-bold text-gray-400">
+                Live On-Chain Proof
+              </div>
+              <div className="p-3 flex-1 flex flex-col gap-3">
+
+                <div className="border border-[#FFD700]/30 bg-[#FFD700]/5 p-3">
+                  <p className="text-[8px] text-[#FFD700] uppercase font-bold mb-2">✓ Real Transaction (Testnet)</p>
+                  <p className="text-[8px] text-gray-500 mb-1">TX Hash</p>
+                  <p className="text-[8px] text-white font-mono break-all leading-relaxed">{DATA.txHash}</p>
+                </div>
+
+                <div className="border border-[#1E2533] p-3 space-y-2">
+                  <p className="text-[8px] text-gray-500 uppercase">NFT ID</p>
+                  <p className="text-[8px] text-[#00FFAA] font-mono break-all leading-relaxed">{DATA.nftId}</p>
+                </div>
+
+                <div className="border border-[#1E2533] p-3 space-y-2">
+                  <p className="text-[8px] text-gray-500 uppercase">Issuer Wallet</p>
+                  <p className="text-[8px] text-white font-mono break-all">{DATA.walletAddress}</p>
+                </div>
+
+                <div className="border border-[#1E2533] p-3 space-y-1.5 text-[8px]">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Standard</span>
+                    <span className="text-[#FFD700]">FRE_902</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Algorithm</span>
+                    <span className="text-[#00FFAA]">SHA-256</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Fee</span>
+                    <span className="text-white">0.000012 XRP</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Status</span>
+                    <span className="text-[#00FFAA] font-bold">tesSUCCESS</span>
+                  </div>
+                </div>
+
+                <a
+                  href={EXPLORER}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block border border-[#00FFAA]/40 text-center py-2 text-[9px] text-[#00FFAA] uppercase tracking-wider hover:bg-[#00FFAA] hover:text-black transition-all font-bold"
+                >
+                  View on XRPL Explorer ↗
+                </a>
+              </div>
+            </div>
+
+          </div>
+
+          {/* ── Footer ── */}
+          <div className="mt-3 flex justify-between items-center text-[8px] text-gray-600 border-t border-[#1E2533] pt-2">
+            <span>Unveil Protocol · Pre-Chain Verification Layer on XRPL</span>
+            <span>Powered by Reality Defender · Hive · AI or Not · XRPL Testnet</span>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<UnveilDashboard />);
+  </script>
+</body>
+</html>
