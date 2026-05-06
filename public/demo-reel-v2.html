@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unveil Protocol — 75s Cinematic Demo</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@300;400;600;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0a0f1e;--surface:#111827;--border:#1e293b;
+  --text:#cbd5e1;--muted:#475569;--muted2:#64748b;
+  --blue:#3b82f6;--blue2:#2563eb;
+  --green:#34d399;--amber:#fbbf24;--red:#f87171;--cyan:#67e8f9;
+  --font:'Inter',sans-serif;--mono:'JetBrains Mono',monospace;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:var(--font);}
+
+/* ── Cinematic frame ── */
+.cinema{position:relative;width:100vw;height:100vh;background:var(--bg);overflow:hidden;}
+/* scanlines */
+.cinema::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px);pointer-events:none;z-index:9990;}
+/* letterbox bars */
+.bar-top,.bar-bot{position:fixed;left:0;right:0;height:52px;background:#000;z-index:9980;transition:height .8s ease;}
+.bar-top{top:0;}
+.bar-bot{bottom:0;}
+.cinema.widescreen .bar-top,.cinema.widescreen .bar-bot{height:72px;}
+
+/* ── Timeline progress ── */
+.progress-track{position:fixed;bottom:0;left:0;right:0;height:3px;background:rgba(255,255,255,.06);z-index:9995;}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--blue),var(--green));width:0;transition:width .1s linear;}
+
+/* ── Scene system ── */
+.scene{position:absolute;inset:0;opacity:0;pointer-events:none;display:flex;flex-direction:column;transition:opacity .5s ease;}
+.scene.on{opacity:1;pointer-events:all;}
+
+/* ── Controls ── */
+.controls{position:fixed;bottom:8px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;z-index:9997;padding:5px 14px;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.08);border-radius:20px;}
+.ctrl-btn{background:none;border:none;color:var(--muted2);cursor:pointer;font-size:12px;font-family:var(--mono);letter-spacing:.06em;padding:2px 6px;transition:color .2s;}
+.ctrl-btn:hover{color:#fff;}
+.ctrl-time{font-size:10px;font-family:var(--mono);color:var(--muted);min-width:48px;text-align:center;}
+.scene-label{font-size:9px;font-family:var(--mono);color:var(--muted);letter-spacing:.1em;}
+
+/* ── Scene 0: SPLASH ── */
+#sc0{background:radial-gradient(ellipse 80% 60% at 50% 40%,rgba(59,130,246,.08) 0%,transparent 70%),var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:0;}
+.sp-eye{font-size:10px;letter-spacing:.22em;color:var(--blue);margin-bottom:18px;opacity:0;transition:opacity .6s .2s;}
+.sp-t{font-size:72px;font-weight:900;line-height:1;color:#fff;letter-spacing:-.03em;text-align:center;opacity:0;transform:translateY(12px);transition:all .7s .4s;}
+.sp-t span{color:var(--green);}
+.sp-sub{font-size:14px;font-weight:300;color:var(--muted2);letter-spacing:.05em;margin-top:14px;opacity:0;transition:opacity .6s .9s;}
+.sp-pill{margin-top:28px;display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(52,211,153,.3);background:rgba(52,211,153,.05);padding:8px 20px;border-radius:30px;font-family:var(--mono);font-size:11px;color:var(--green);opacity:0;transition:opacity .5s 1.4s;}
+.sp-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:540px;margin-top:32px;opacity:0;transition:opacity .6s 1.8s;}
+.sp-stat{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:13px;text-align:center;}
+.sp-sv{font-size:22px;font-weight:800;margin-bottom:3px;}
+.sp-sl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;}
+.sc0.play .sp-eye,.sc0.play .sp-sub,.sc0.play .sp-pill,.sc0.play .sp-stats{opacity:1;}
+.sc0.play .sp-t{opacity:1;transform:translateY(0);}
+
+/* ── Scene 1: BREACH ── */
+#sc1{background:radial-gradient(ellipse 60% 50% at 50% 50%,rgba(248,113,113,.05) 0%,transparent 70%),var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+.br-eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);opacity:0;transition:opacity .5s;}
+.br-split{display:grid;grid-template-columns:1fr 1fr;gap:20px;width:680px;}
+.br-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;opacity:0;transform:translateY(8px);transition:all .5s;}
+.br-card-title{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.br-terminal{font-family:var(--mono);font-size:10px;line-height:2;color:var(--muted2);}
+.br-terminal .r{color:var(--red);font-weight:700;}
+.br-terminal .c{color:var(--cyan);}
+.br-terminal .a{color:var(--amber);}
+.br-tag{display:inline-block;margin-top:10px;padding:4px 10px;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.3);border-radius:5px;font-family:var(--mono);font-size:10px;color:var(--red);font-weight:700;letter-spacing:.06em;opacity:0;transition:opacity .3s;}
+.br-sub{font-size:13px;color:var(--muted2);font-weight:300;letter-spacing:.03em;opacity:0;transition:opacity .5s;max-width:500px;text-align:center;}
+.sc1.play .br-eyebrow,.sc1.play .br-sub{opacity:1;}
+.sc1.play .br-card{opacity:1;transform:translateY(0);}
+.sc1.play .br-card:nth-child(2){transition-delay:.25s;}
+.sc1.play .br-tag{opacity:1;}
+
+/* ── Scene 2: ACTIVATION ── */
+#sc2{background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:20px;}
+.ac-title{font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--blue);opacity:0;transition:opacity .4s;}
+.ac-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;width:480px;padding:22px;opacity:0;transform:translateY(10px);transition:all .5s .2s;}
+.ac-btn{width:100%;padding:14px;font-size:13px;font-weight:700;font-family:var(--mono);letter-spacing:.08em;border:none;border-radius:8px;background:var(--blue2);color:#fff;box-shadow:0 0 24px rgba(37,99,235,.4);cursor:default;margin-bottom:16px;}
+.ac-btn.done{background:rgba(59,130,246,.12);border:1px solid var(--blue);color:var(--blue);box-shadow:none;}
+.ac-steps{display:flex;flex-direction:column;gap:10px;}
+.ac-step{display:flex;align-items:center;gap:10px;font-size:11px;font-family:var(--mono);color:var(--muted);transition:color .4s;}
+.ac-step.on{color:var(--blue);}
+.ac-dot{width:7px;height:7px;border-radius:50%;background:var(--border);flex-shrink:0;transition:all .4s;}
+.ac-dot.on{background:var(--blue);box-shadow:0 0 8px rgba(59,130,246,.8);}
+.ac-log{width:480px;background:#000;border:1px solid var(--border);border-radius:9px;padding:12px 14px;opacity:0;transition:opacity .4s .6s;}
+.ac-log-line{font-size:10px;font-family:var(--mono);color:var(--muted2);line-height:2;opacity:0;transform:translateX(-4px);transition:all .3s;}
+.ac-log-line.on{opacity:1;transform:translateX(0);}
+.ac-log-line .cy{color:var(--cyan);}
+.ac-log-line .gr{color:var(--green);}
+.sc2.play .ac-title,.sc2.play .ac-log{opacity:1;}
+.sc2.play .ac-panel{opacity:1;transform:translateY(0);}
+
+/* ── Scene 3: REJECT (Scenario A) ── */
+#sc3{background:radial-gradient(ellipse 60% 50% at 50% 50%,rgba(248,113,113,.06) 0%,transparent 70%),var(--bg);display:grid;grid-template-columns:4fr 5fr 3fr;gap:14px;padding:56px 24px 56px;align-content:start;}
+/* mini panel */
+.mini-panel{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:14px;opacity:0;transition:all .5s;}
+.mini-panel.on{opacity:1;}
+.mp-title{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--blue);margin-bottom:10px;display:flex;align-items:center;gap:5px;}
+/* engine bars */
+.eng{margin-bottom:11px;}
+.eng-h{display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);margin-bottom:4px;}
+.eng-s{font-weight:700;transition:color .5s;}
+.eng-s.g{color:var(--green)}.eng-s.r{color:var(--red)}
+.btr{height:2px;background:rgba(255,255,255,.06);border-radius:1px;overflow:hidden;}
+.bfill{height:100%;border-radius:1px;transition:width 1.2s ease,background .5s;}
+.bfill.g{background:var(--green)}.bfill.r{background:var(--red)}
+/* verdict in scene 3 */
+.v3box{margin-top:10px;padding:10px;border-radius:7px;text-align:center;transition:all .5s;}
+.v3box.sy{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);}
+.v3box.au{background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);}
+.v3-lbl{font-size:8px;color:var(--muted2);letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px;}
+.v3-val{font-size:14px;font-weight:900;font-family:var(--mono);transition:color .5s;}
+.v3-val.r{color:var(--red)}.v3-val.g{color:var(--green)}
+/* log in scene 3 */
+.s3-log{font-family:var(--mono);font-size:9px;line-height:2;overflow:hidden;}
+.s3l{opacity:0;transform:translateY(3px);transition:all .25s;display:flex;gap:8px;}
+.s3l.on{opacity:1;transform:translateY(0);}
+.s3l .t{color:var(--muted);flex-shrink:0;}.s3l .m{color:var(--muted2);}
+.s3l .m.r{color:var(--red);font-weight:700;}.s3l .m.g{color:var(--green);}.s3l .m.c{color:var(--cyan);}
+/* ledger */
+.lp3{flex:1;display:flex;flex-direction:column;gap:8px;}
+.lf-lbl{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px;}
+.lf-v{font-size:9px;font-family:var(--mono);color:#93c5fd;word-break:break-all;}
+.jb{background:#000;border:1px solid var(--border);border-radius:6px;padding:10px;font-family:var(--mono);font-size:9px;line-height:1.9;flex:1;}
+.jk{color:var(--muted2)}.jvg{color:var(--green)}.jvb{color:#93c5fd}.jva{color:var(--amber)}.jvn{color:#f9a8d4}.jvr{color:var(--red)}
+/* block overlay */
+.block-overlay{position:absolute;inset:0;background:rgba(248,113,113,.06);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .5s;pointer-events:none;}
+.block-overlay.on{opacity:1;}
+.block-msg{font-size:32px;font-weight:900;font-family:var(--mono);color:var(--red);letter-spacing:.05em;text-shadow:0 0 40px rgba(248,113,113,.5);text-align:center;}
+.block-msg .sub{display:block;font-size:13px;font-weight:400;color:rgba(248,113,113,.6);margin-top:6px;}
+
+/* ── Scene 4: REVIEW (Scenario B) ── */
+#sc4{background:radial-gradient(ellipse 60% 50% at 50% 50%,rgba(251,191,36,.04) 0%,transparent 70%),var(--bg);display:grid;grid-template-columns:4fr 5fr 3fr;gap:14px;padding:56px 24px 56px;align-content:start;}
+/* pulse highlight on queue item */
+.qi-pend-s4{padding:12px;border:1px solid rgba(251,191,36,.4);background:rgba(251,191,36,.05);border-radius:8px;transition:all .4s;}
+.qi-pend-s4.approved{border-color:rgba(52,211,153,.4);background:rgba(52,211,153,.05);}
+.qi-id{font-size:10px;font-weight:700;color:#fff;font-family:var(--mono);}
+.qi-src{font-size:8px;color:var(--muted);margin-top:1px;}
+.qi-badge-s4{font-size:8px;padding:2px 7px;border-radius:3px;font-weight:700;font-family:var(--mono);display:inline-block;margin-top:6px;}
+.qi-badge-s4.pend{background:var(--amber);color:#000;}
+.qi-badge-s4.app{background:rgba(52,211,153,.2);color:var(--green);border:1px solid rgba(52,211,153,.3);}
+.qi-score-s4{display:flex;align-items:center;gap:8px;margin:8px 0;}
+.qi-prog-s4{flex:1;height:2px;background:var(--border);border-radius:1px;overflow:hidden;}
+.qi-prog-fill-s4{height:100%;border-radius:1px;transition:width .8s,background .5s;}
+.ap-btn{width:100%;padding:9px;font-size:10px;font-weight:700;font-family:var(--mono);border:1px solid rgba(52,211,153,.3);border-radius:6px;background:rgba(52,211,153,.12);color:var(--green);cursor:default;margin-top:8px;transition:all .3s;letter-spacing:.06em;}
+.ap-btn.clicked{background:rgba(52,211,153,.25);box-shadow:0 0 16px rgba(52,211,153,.3);}
+
+/* ── Scene 5: EVIDENCE ── */
+#sc5{background:var(--bg);align-items:center;justify-content:center;flex-direction:column;gap:18px;}
+.ev-title{font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--blue);opacity:0;transition:opacity .4s;}
+.ev-split{display:grid;grid-template-columns:1fr 1fr;gap:16px;width:720px;}
+.ev-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;opacity:0;transform:translateY(8px);transition:all .5s;}
+.ev-card:nth-child(2){transition-delay:.2s;}
+.ev-card-t{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--blue);margin-bottom:10px;}
+.xpl-proof{font-family:var(--mono);font-size:9px;color:var(--muted2);line-height:1.9;}
+.xpl-proof .g{color:var(--green)}.xpl-proof .b{color:#93c5fd}.xpl-proof .a{color:var(--amber)}.xpl-proof .n{color:#f9a8d4}
+.code-block{background:#000;border:1px solid var(--border);border-radius:7px;padding:12px;font-family:var(--mono);font-size:11px;line-height:1.9;}
+.code-block .kw{color:#c084fc}.code-block .fn{color:#60a5fa}.code-block .st{color:var(--green)}.code-block .cm{color:var(--muted)}.code-block .op{color:var(--amber)}
+.ev-final{width:720px;text-align:center;opacity:0;transition:opacity .6s;}
+.ev-ft{font-size:44px;font-weight:900;color:#fff;letter-spacing:-.02em;}
+.ev-ft span{color:var(--green);}
+.ev-fsub{font-size:13px;color:var(--muted2);font-weight:300;letter-spacing:.04em;margin-top:8px;}
+.sc5.play .ev-title,.sc5.play .ev-final{opacity:1;}
+.sc5.play .ev-card{opacity:1;transform:translateY(0);}
+
+/* ── Subtitle bar ── */
+.subtitle{position:fixed;bottom:58px;left:0;right:0;text-align:center;font-size:14px;font-weight:400;color:rgba(255,255,255,.85);font-family:var(--font);text-shadow:0 1px 6px rgba(0,0,0,.8);opacity:0;transition:opacity .4s;z-index:9985;padding:0 80px;}
+.subtitle.on{opacity:1;}
+
+/* ── Scene number badge ── */
+.scene-badge{position:fixed;top:60px;right:24px;font-size:9px;font-family:var(--mono);color:var(--muted);letter-spacing:.1em;z-index:9985;opacity:0;transition:opacity .4s;}
+.scene-badge.on{opacity:1;}
+</style>
+</head>
+<body>
+<div class="cinema" id="cinema">
+
+  <!-- Letterbox -->
+  <div class="bar-top"></div>
+  <div class="bar-bot"></div>
+
+  <!-- ═══════════ SCENE 0: SPLASH ═══════════ -->
+  <div class="scene" id="sc0">
+    <div class="sp-eye" id="spEye">INSTITUTIONAL PRE-CHAIN INFRASTRUCTURE</div>
+    <div class="sp-t" id="spT">UNVEIL<br><span>PROTOCOL</span></div>
+    <div class="sp-sub" id="spSub">AI-Powered Synthetic Data Verification on XRPL Blockchain</div>
+    <div class="sp-pill" id="spPill">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+      Live on XRPL Testnet · TX 1C251E51…
+    </div>
+    <div class="sp-stats" id="spStats">
+      <div class="sp-stat"><div class="sp-sv" style="color:var(--green)">&lt;3s</div><div class="sp-sl">XRPL Finality</div></div>
+      <div class="sp-stat"><div class="sp-sv" style="color:var(--blue)">3</div><div class="sp-sl">AI Engines</div></div>
+      <div class="sp-stat"><div class="sp-sv" style="color:var(--amber)">2-of-2</div><div class="sp-sl">MultiSig</div></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ SCENE 1: BREACH ═══════════ -->
+  <div class="scene" id="sc1">
+    <div class="br-eyebrow" id="brEye" style="margin-bottom:16px;">THE CORE PROBLEM</div>
+    <div class="br-split" id="brSplit">
+      <div class="br-card">
+        <div class="br-card-title" style="color:var(--red);">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          AI-Generated Invoice
+        </div>
+        <div class="br-terminal">
+          <div><span class="c">GAN_OUTPUT</span>: synthetic_invoice.pdf</div>
+          <div>Company: <span class="r">ACME Corp (FAKE)</span></div>
+          <div>Amount: <span class="a">$847,200.00</span></div>
+          <div>Stamp: <span class="r">forged ✗</span></div>
+          <div>Signature: <span class="r">AI-generated ✗</span></div>
+        </div>
+        <div class="br-tag" id="brTag1">DEEPFAKE DOCUMENT</div>
+      </div>
+      <div class="br-card">
+        <div class="br-card-title" style="color:var(--amber);">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          Transaction Trigger
+        </div>
+        <div class="br-terminal">
+          <div>[TX] UNVERIFIED SOURCE</div>
+          <div>From: <span class="a">rHb5Cq9xYq...9A2F</span></div>
+          <div>To:&nbsp;&nbsp; rRecipient...7K1B</div>
+          <div>Amount: <span class="r">50,000 XRP</span></div>
+          <div>Status: <span class="a" id="brStatus">PENDING ⚡</span></div>
+        </div>
+        <div class="br-tag" id="brTag2">UNVERIFIED · UNPROTECTED</div>
+      </div>
+    </div>
+    <div class="br-sub" id="brSub">Ledgers preserve data integrity, not data authenticity.</div>
+  </div>
+
+  <!-- ═══════════ SCENE 2: ACTIVATION ═══════════ -->
+  <div class="scene" id="sc2">
+    <div class="ac-title" id="acTitle">ACTIVATING PRE-CHAIN ENFORCEMENT</div>
+    <div class="ac-panel" id="acPanel">
+      <div class="ac-btn" id="acBtn">ENABLE PROTECTION</div>
+      <div class="ac-steps">
+        <div class="ac-step" id="as1"><div class="ac-dot" id="ad1"></div>Step 1: Initiating SignerListSet</div>
+        <div class="ac-step" id="as2"><div class="ac-dot" id="ad2"></div>Step 2: Adding Unveil Authority</div>
+        <div class="ac-step" id="as3"><div class="ac-dot" id="ad3"></div>Step 3: Ledger Confirmation</div>
+      </div>
+    </div>
+    <div class="ac-log" id="acLog">
+      <div class="ac-log-line" id="al1"><span class="cy">[XRPL]</span> SignerListSet tx initiated…</div>
+      <div class="ac-log-line" id="al2"><span class="cy">[XRPL]</span> Hash: <span class="cy">7A92B4C1D8E3F2A059B7C6E1D4F2A8B3…</span></div>
+      <div class="ac-log-line" id="al3"><span class="cy">[LEDGER]</span> Confirmed on Ledger #16836470</div>
+      <div class="ac-log-line" id="al4"><span class="gr">[STATUS]</span> 2-of-2 Multisig Enforced. <span class="gr">Unveil is the gatekeeper.</span></div>
+    </div>
+  </div>
+
+  <!-- ═══════════ SCENE 3: REJECTION ═══════════ -->
+  <div class="scene" id="sc3">
+    <!-- LEFT: Consensus -->
+    <div class="mini-panel" id="mp3L" style="grid-column:1;grid-row:1;align-self:start;">
+      <div class="mp-title">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Consensus Monitor
+      </div>
+      <div class="eng">
+        <div class="eng-h"><span>Reality Defender</span><span class="eng-s r" id="s3RD">12%</span></div>
+        <div class="btr"><div class="bfill r" id="b3RD" style="width:12%"></div></div>
+      </div>
+      <div class="eng">
+        <div class="eng-h"><span>Hive Moderation</span><span class="eng-s r" id="s3HV">8%</span></div>
+        <div class="btr"><div class="bfill r" id="b3HV" style="width:8%"></div></div>
+      </div>
+      <div class="eng">
+        <div class="eng-h"><span>AI or Not</span><span class="eng-s r" id="s3AN">15%</span></div>
+        <div class="btr"><div class="bfill r" id="b3AN" style="width:15%"></div></div>
+      </div>
+      <div class="v3box sy">
+        <div class="v3-lbl">Consensus Verdict</div>
+        <div class="v3-val r">SYNTHETIC</div>
+        <div style="font-size:9px;color:rgba(248,113,113,.6);font-family:var(--mono);margin-top:3px;">99% FAKE · DENY</div>
+      </div>
+    </div>
+    <!-- CENTER: Log -->
+    <div class="mini-panel" id="mp3C" style="grid-column:2;grid-row:1;align-self:start;">
+      <div class="mp-title">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        System Log
+      </div>
+      <div class="s3-log" id="s3log">
+        <div class="s3l" id="l3_1"><span class="t">[16:43:01]</span><span class="m c">[XRPL] Node sync established</span></div>
+        <div class="s3l" id="l3_2"><span class="t">[16:43:01]</span><span class="m">[ENGINE] 3 engines initialized</span></div>
+        <div class="s3l" id="l3_3"><span class="t">[16:43:02]</span><span class="m r">[RD] synthetic_score: 0.988</span></div>
+        <div class="s3l" id="l3_4"><span class="t">[16:43:02]</span><span class="m r">[Hive] ai_generated: true (0.992)</span></div>
+        <div class="s3l" id="l3_5"><span class="t">[16:43:03]</span><span class="m r">[AION] verdict: FAKE (0.985)</span></div>
+        <div class="s3l" id="l3_6"><span class="t">[16:43:03]</span><span class="m r">[CONSENSUS] SYNTHETIC · 99% confidence</span></div>
+        <div class="s3l" id="l3_7"><span class="t">[16:43:04]</span><span class="m r">[LEDGER] Validation Failed: Missing Unveil Signature</span></div>
+        <div class="s3l" id="l3_8"><span class="t">[16:43:04]</span><span class="m r">[STATUS] TRANSACTION INVALID ■</span></div>
+      </div>
+    </div>
+    <!-- RIGHT: Ledger -->
+    <div class="mini-panel" id="mp3R" style="grid-column:3;grid-row:1;align-self:start;">
+      <div class="mp-title">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        Ledger Proof
+      </div>
+      <div class="lp3">
+        <div><div class="lf-lbl">NFT Minted</div><div class="lf-v">C0100E772…9A2B1F</div></div>
+        <div class="jb">
+          <span class="jk">{</span><br>
+          &nbsp;<span class="jk">"verdict":</span> <span class="jvr">"FAIL"</span>,<br>
+          &nbsp;<span class="jk">"score":</span> <span class="jvn">99</span>,<br>
+          &nbsp;<span class="jk">"standard":</span> <span class="jvb">"FRE_902"</span>,<br>
+          &nbsp;<span class="jk">"action":</span> <span class="jvr">"BLOCKED"</span><br>
+          <span class="jk">}</span>
+        </div>
+      </div>
+    </div>
+    <!-- Block overlay -->
+    <div class="block-overlay" id="blockOv">
+      <div class="block-msg">
+        NO UNVEIL SIGNATURE<br>NO TRANSACTION
+        <span class="sub">Enforced at the ledger level</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ SCENE 4: REVIEW ═══════════ -->
+  <div class="scene" id="sc4">
+    <!-- LEFT: Consensus (amber) -->
+    <div class="mini-panel" id="mp4L" style="grid-column:1;grid-row:1;align-self:start;">
+      <div class="mp-title">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Consensus Monitor
+      </div>
+      <div class="eng">
+        <div class="eng-h"><span>Reality Defender</span><span class="eng-s" id="s4RD" style="color:var(--amber)">82%</span></div>
+        <div class="btr"><div class="bfill" id="b4RD" style="width:82%;background:var(--amber)"></div></div>
+      </div>
+      <div class="eng">
+        <div class="eng-h"><span>Hive Moderation</span><span class="eng-s" id="s4HV" style="color:var(--amber)">78%</span></div>
+        <div class="btr"><div class="bfill" id="b4HV" style="width:78%;background:var(--amber)"></div></div>
+      </div>
+      <div class="eng">
+        <div class="eng-h"><span>AI or Not</span><span class="eng-s" id="s4AN" style="color:var(--amber)">85%</span></div>
+        <div class="btr"><div class="bfill" id="b4AN" style="width:85%;background:var(--amber)"></div></div>
+      </div>
+      <div class="v3box rv" style="background:rgba(251,191,36,.08);border-color:rgba(251,191,36,.3);">
+        <div class="v3-lbl">Consensus Verdict</div>
+        <div class="v3-val" style="color:var(--amber);">REVIEW REQUIRED</div>
+        <div style="font-size:9px;color:rgba(251,191,36,.6);font-family:var(--mono);margin-top:3px;">Score: 82% · Threshold: 70–90</div>
+      </div>
+    </div>
+    <!-- CENTER: Queue -->
+    <div class="mini-panel" id="mp4C" style="grid-column:2;grid-row:1;align-self:start;">
+      <div class="mp-title">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        Human-in-the-Loop Queue
+      </div>
+      <div class="qi-pend-s4" id="qi4" style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div><div class="qi-id">TX_REQUEST_#8821</div><div class="qi-src">Source: rHb5C...9xYq · 50,000 XRP</div></div>
+          <span class="qi-badge-s4 pend" id="q4badge">PENDING</span>
+        </div>
+        <div class="qi-score-s4">
+          <span style="font-size:8px;color:var(--muted);font-family:var(--mono)">SCORE:</span>
+          <span style="font-size:10px;font-weight:700;color:var(--amber);font-family:var(--mono)" id="q4score">82%</span>
+          <div class="qi-prog-s4"><div class="qi-prog-fill-s4" id="q4bar" style="width:82%;background:var(--amber)"></div></div>
+        </div>
+        <button class="ap-btn" id="q4btn">✓ APPROVE</button>
+      </div>
+      <!-- Log -->
+      <div class="s3-log" id="s4log" style="margin-top:6px;">
+        <div class="s3l" id="l4_1"><span class="t">[16:43:40]</span><span class="m" style="color:var(--amber)">[QUEUE] Review required: score=82%</span></div>
+        <div class="s3l" id="l4_2"><span class="t">[16:43:41]</span><span class="m">[SYSTEM] Awaiting admin decision…</span></div>
+        <div class="s3l" id="l4_3"><span class="t">[16:43:44]</span><span class="m g">[ADMIN] Manual Signature Issued.</span></div>
+        <div class="s3l" id="l4_4"><span class="t">[16:43:44]</span><span class="m c">[XRPL] 2-of-2 Multisig — complete</span></div>
+        <div class="s3l" id="l4_5"><span class="t">[16:43:45]</span><span class="m g">[LEDGER] Tx Success. Finality &lt; 3s.</span></div>
+      </div>
+    </div>
+    <!-- RIGHT: Ledger after approve -->
+    <div class="mini-panel" id="mp4R" style="grid-column:3;grid-row:1;align-self:start;opacity:0;transition:opacity .6s;">
+      <div class="mp-title">Ledger Proof</div>
+      <div class="lp3">
+        <div><div class="lf-lbl">TX Hash</div><div class="lf-v" id="l4hash" style="opacity:.3">Awaiting…</div></div>
+        <div class="jb">
+          <span class="jk">{</span><br>
+          &nbsp;<span class="jk">"verdict":</span> <span id="j4v" class="jvg" style="color:var(--amber)">"REVIEW→AUTHENTIC"</span>,<br>
+          &nbsp;<span class="jk">"score":</span> <span class="jvn">82</span>,<br>
+          &nbsp;<span class="jk">"approvedBy":</span> <span class="jva">"admin"</span>,<br>
+          &nbsp;<span class="jk">"multisig":</span> <span class="jvg">"2-of-2 ✓"</span><br>
+          <span class="jk">}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ SCENE 5: EVIDENCE & SDK ═══════════ -->
+  <div class="scene" id="sc5">
+    <div class="ev-title" id="evTitle">IMMUTABLE PROOF · SDK INTEGRATION</div>
+    <div class="ev-split" id="evSplit">
+      <!-- XRPL Explorer proof -->
+      <div class="ev-card">
+        <div class="ev-card-t">XRPL On-Chain Evidence (FRE §902)</div>
+        <div class="xpl-proof">
+          <div>TX: <span class="b">1C251E510A06…329D97F</span></div>
+          <div>NFT: <span class="b">000800000E78…0E772</span></div>
+          <div>Ledger: <span class="n">#16,836,468</span> · <span class="g">tesSUCCESS</span></div>
+          <br>
+          <div>MemoData (Hex → JSON):</div>
+          <div style="margin-top:4px;background:#000;border-radius:5px;padding:8px;font-size:8.5px;line-height:1.9;">
+            <span class="a">"engine"</span>: <span class="g">"Unveil v1.0"</span>,<br>
+            <span class="a">"verdict"</span>: <span class="g">"AUTHENTIC"</span>,<br>
+            <span class="a">"score"</span>: <span class="n">98.2</span>,<br>
+            <span class="a">"standard"</span>: <span class="b">"FRE_902"</span>,<br>
+            <span class="a">"algorithm"</span>: <span class="b">"SHA-256"</span>
+          </div>
+          <div style="margin-top:8px;padding:5px 8px;background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2);border-radius:5px;font-size:9px;color:var(--green);">
+            ✓ Cryptographically immutable · Cannot be altered or deleted
+          </div>
+        </div>
+      </div>
+      <!-- SDK code -->
+      <div class="ev-card">
+        <div class="ev-card-t">SDK Integration</div>
+        <div class="code-block">
+          <span class="cm">// 1. Verify content</span><br>
+          <span class="kw">const</span> result = <span class="kw">await</span><br>
+          &nbsp;&nbsp;unveil.<span class="fn">verify</span>(data);<br>
+          <br>
+          <span class="cm">// 2. Protected transaction</span><br>
+          <span class="kw">const</span> tx = <span class="kw">await</span> unveil<br>
+          &nbsp;&nbsp;.<span class="fn">submitProtectedTransaction</span>(<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;wallet, payload<br>
+          &nbsp;&nbsp;);<br>
+          <br>
+          <span class="cm">// 3. Subscribe protection</span><br>
+          <span class="kw">await</span> unveil<br>
+          &nbsp;&nbsp;.<span class="fn">subscribeProtection</span>(seed);
+        </div>
+      </div>
+    </div>
+    <!-- Final message -->
+    <div class="ev-final" id="evFinal" style="transition-delay:.4s;">
+      <div class="ev-ft">UNVEIL <span>PROTOCOL</span></div>
+      <div class="ev-fsub">Before money moves, truth must be enforced.</div>
+    </div>
+  </div>
+
+  <!-- Subtitle -->
+  <div class="subtitle" id="subtitle"></div>
+  <!-- Scene badge -->
+  <div class="scene-badge" id="sceneBadge"></div>
+  <!-- Progress -->
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <!-- Controls -->
+  <div class="controls">
+    <button class="ctrl-btn" id="btnPlay" onclick="togglePlay()">⏸ PAUSE</button>
+    <span class="ctrl-time" id="ctrlTime">0:00 / 1:15</span>
+    <button class="ctrl-btn" onclick="restart()">↺ RESTART</button>
+    <span class="scene-label" id="ctrlScene">SCENE 0</span>
+  </div>
+
+</div>
+<script>
+// ═══════════════════════════════════════════════════════════
+//  TIMELINE  (75 seconds = 75000 ms)
+// ═══════════════════════════════════════════════════════════
+const TOTAL = 75000;
+
+// [t_start, t_end, scene_index, subtitle_text]
+const TIMELINE = [
+  // ── Scene 0: Splash (0–10s) ──────────────────
+  { t:0,    fn: () => showScene(0) },
+  { t:100,  fn: () => { addClass('sc0','play');
+                         addClass('spEye','');
+                         addClass('spT','');
+                         addClass('spSub','');
+                         addClass('spPill','');
+                         addClass('spStats','');} },
+  { t:500,  fn: () => showSub('AI-Powered Deepfake Verification · Built on XRPL') },
+
+  // ── Scene 1: Breach (10–20s) ─────────────────
+  { t:10000, fn: () => { hideSub(); showScene(1); setBadge('SCENE 01 · THE CORE PROBLEM'); } },
+  { t:10400, fn: () => { addClass('brEye','');addClass('brSplit','');} },
+  { t:11000, fn: () => { addClass('brTag1','');addClass('brTag2','');} },
+  { t:12000, fn: () => showSub('Ledgers preserve data integrity, not data authenticity.') },
+  { t:13500, fn: () => addClass('brSub','') },
+
+  // ── Scene 2: Activation (20–33s) ────────────
+  { t:20000, fn: () => { hideSub(); showScene(2); setBadge('SCENE 02 · ACTIVATION'); } },
+  { t:20300, fn: () => { addClass('acTitle',''); addClass('acPanel',''); showSub('Activating Pre-chain Enforcement. Unveil is the gatekeeper.'); } },
+  { t:21000, fn: () => { stepOn(1); logOn('al1'); } },
+  { t:22200, fn: () => { stepOn(2); logOn('al2'); addClass('acLog',''); } },
+  { t:23400, fn: () => { stepOn(3); logOn('al3'); } },
+  { t:24600, fn: () => { doneBtn(); logOn('al4'); } },
+
+  // ── Scene 3: Rejection (33–53s) ─────────────
+  { t:33000, fn: () => { hideSub(); showScene(3); setBadge('SCENE 03 · AUTOMATED REJECTION'); } },
+  { t:33300, fn: () => { addClass('mp3L','on'); addClass('mp3C','on'); addClass('mp3R','on'); } },
+  { t:34000, fn: () => { logSeq3(0); } },
+  { t:35000, fn: () => { logSeq3(1); } },
+  { t:36000, fn: () => { logSeq3(2); logSeq3(3); } },
+  { t:37000, fn: () => { logSeq3(4); logSeq3(5); } },
+  { t:38000, fn: () => { logSeq3(6); logSeq3(7); showSub('No Unveil Signature, No Transaction. Enforced at the ledger level.'); } },
+  { t:39000, fn: () => addClass('blockOv','on') },
+
+  // ── Scene 4: Review (53–68s) ─────────────────
+  { t:53000, fn: () => { hideSub(); showScene(4); setBadge('SCENE 04 · HUMAN-IN-THE-LOOP'); } },
+  { t:53400, fn: () => { addClass('mp4L','on'); addClass('mp4C','on'); logSeq4(0); logSeq4(1); showSub('Ambiguous cases require explicit authorization.'); } },
+  { t:55000, fn: () => document.getElementById('mp4R').style.opacity='1' },
+  { t:56000, fn: () => { logSeq4(2); logSeq4(3); clickApprove(); } },
+  { t:57500, fn: () => { logSeq4(4); approveSuccess(); } },
+
+  // ── Scene 5: Evidence (68–75s) ───────────────
+  { t:68000, fn: () => { hideSub(); showScene(5); setBadge('SCENE 05 · EVIDENCE & SDK'); } },
+  { t:68400, fn: () => { addClass('sc5','play'); showSub('Immutable on-chain proof. Developer-ready SDK.'); } },
+  { t:72000, fn: () => addClass('evFinal','') },
+  { t:74500, fn: () => hideSub() },
+  { t:75000, fn: () => { done(); } },
+];
+
+// ═══════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════
+function showScene(n) {
+  document.querySelectorAll('.scene').forEach(s => s.classList.remove('on'));
+  document.getElementById('sc'+n).classList.add('on');
+}
+function addClass(id, cls) {
+  const el = document.getElementById(id);
+  if (el && cls) el.classList.add(cls);
+  else if (el) el.style.opacity = '1';
+}
+function showSub(txt) {
+  const s = document.getElementById('subtitle');
+  s.textContent = txt;
+  s.classList.add('on');
+}
+function hideSub() {
+  document.getElementById('subtitle').classList.remove('on');
+}
+function setBadge(txt) {
+  const b = document.getElementById('sceneBadge');
+  b.textContent = txt;
+  b.classList.add('on');
+  document.getElementById('ctrlScene').textContent = txt.split(' · ')[0];
+}
+function stepOn(n) {
+  const s = document.getElementById('as'+n), d = document.getElementById('ad'+n);
+  if (s) s.classList.add('on');
+  if (d) d.classList.add('on');
+}
+function logOn(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add('on');
+}
+function doneBtn() {
+  const btn = document.getElementById('acBtn');
+  if (btn) { btn.textContent = 'PROTECTION ACTIVE'; btn.classList.add('done'); }
+}
+const L3 = ['l3_1','l3_2','l3_3','l3_4','l3_5','l3_6','l3_7','l3_8'];
+function logSeq3(i) { const el = document.getElementById(L3[i]); if(el) el.classList.add('on'); }
+const L4 = ['l4_1','l4_2','l4_3','l4_4','l4_5'];
+function logSeq4(i) { const el = document.getElementById(L4[i]); if(el) el.classList.add('on'); }
+function clickApprove() {
+  const btn = document.getElementById('q4btn');
+  if (btn) btn.classList.add('clicked');
+}
+function approveSuccess() {
+  const qi = document.getElementById('qi4'), badge = document.getElementById('q4badge');
+  if (qi) qi.classList.add('approved');
+  if (badge) { badge.className = 'qi-badge-s4 app'; badge.textContent = 'APPROVED'; }
+  const lhash = document.getElementById('l4hash');
+  if (lhash) { lhash.style.opacity = '1'; lhash.textContent = 'A4B7C2D1E8F3092A…'; }
+  const j4v = document.getElementById('j4v');
+  if (j4v) { j4v.style.color = 'var(--green)'; }
+}
+function done() {
+  document.getElementById('btnPlay').textContent = '▶ REPLAY';
+  document.getElementById('btnPlay').onclick = restart;
+  isPlaying = false;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PLAYER
+// ═══════════════════════════════════════════════════════════
+let startTime = null, elapsed = 0, rafId = null, isPlaying = true;
+let nextEvent = 0;
+
+function formatTime(ms) {
+  const s = Math.floor(ms / 1000);
+  return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0');
+}
+
+function tick(now) {
+  if (!isPlaying) return;
+  if (!startTime) startTime = now;
+  elapsed = now - startTime;
+
+  // Progress bar
+  const pct = Math.min(100, (elapsed / TOTAL) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('ctrlTime').textContent = formatTime(elapsed) + ' / 1:15';
+
+  // Fire events
+  while (nextEvent < TIMELINE.length && TIMELINE[nextEvent].t <= elapsed) {
+    try { TIMELINE[nextEvent].fn(); } catch(e) {}
+    nextEvent++;
+  }
+
+  if (elapsed < TOTAL) {
+    rafId = requestAnimationFrame(tick);
+  }
+}
+
+function togglePlay() {
+  if (isPlaying) {
+    isPlaying = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    document.getElementById('btnPlay').textContent = '▶ PLAY';
+  } else {
+    isPlaying = true;
+    startTime = performance.now() - elapsed;
+    document.getElementById('btnPlay').textContent = '⏸ PAUSE';
+    rafId = requestAnimationFrame(tick);
+  }
+}
+
+function restart() {
+  isPlaying = false;
+  if (rafId) cancelAnimationFrame(rafId);
+  // Reset all state
+  startTime = null; elapsed = 0; nextEvent = 0;
+  document.getElementById('progressFill').style.width = '0';
+  document.getElementById('ctrlTime').textContent = '0:00 / 1:15';
+  document.getElementById('subtitle').classList.remove('on');
+  document.getElementById('sceneBadge').classList.remove('on');
+  document.querySelectorAll('.scene').forEach(s => s.classList.remove('on'));
+  // Remove all dynamic classes
+  ['spEye','spT','spSub','spPill','spStats'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.cssText = '';
+  });
+  document.getElementById('sc0').classList.remove('play');
+  document.getElementById('sc5').classList.remove('play');
+  document.getElementById('acTitle').style.opacity='';
+  document.getElementById('acPanel').style.opacity='';
+  document.getElementById('acLog').style.opacity='';
+  ['as1','as2','as3'].forEach(i => { const el=document.getElementById(i); if(el) el.classList.remove('on'); });
+  ['ad1','ad2','ad3'].forEach(i => { const el=document.getElementById(i); if(el) el.classList.remove('on'); });
+  [...L3,...L4,'al1','al2','al3','al4'].forEach(id => { const el=document.getElementById(id); if(el) el.classList.remove('on'); });
+  ['mp3L','mp3C','mp3R','mp4L','mp4C'].forEach(id => { const el=document.getElementById(id); if(el) el.classList.remove('on'); });
+  document.getElementById('mp4R').style.opacity='0';
+  document.getElementById('blockOv').classList.remove('on');
+  document.getElementById('acBtn').textContent='ENABLE PROTECTION';
+  document.getElementById('acBtn').classList.remove('done');
+  document.getElementById('q4btn').classList.remove('clicked');
+  const qi4=document.getElementById('qi4'); if(qi4) qi4.classList.remove('approved');
+  const q4b=document.getElementById('q4badge'); if(q4b){q4b.className='qi-badge-s4 pend';q4b.textContent='PENDING';}
+  const lhash=document.getElementById('l4hash'); if(lhash){lhash.style.opacity='.3';lhash.textContent='Awaiting…';}
+  const j4v=document.getElementById('j4v'); if(j4v) j4v.style.color='var(--amber)';
+  document.getElementById('evFinal').style.opacity='';
+  document.getElementById('btnPlay').textContent='⏸ PAUSE';
+  document.getElementById('btnPlay').onclick = togglePlay;
+  // Restart
+  isPlaying = true;
+  rafId = requestAnimationFrame(tick);
+}
+
+// ── Auto-start ──
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
