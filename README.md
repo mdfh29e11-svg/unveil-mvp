@@ -5,7 +5,7 @@
 *GitHub Repository — KFIP / XRPL Evaluation*
 
 ---
-
+hh
 > **An insurer receives a suspicious claim image just before payout.**
 
 | 단계 | 내용 |
@@ -143,7 +143,7 @@ XRPL의 낮은 지연 시간과 Memo 필드 기반 구조화 데이터 기록은
 | | JSON + SHA-256 Structured Memo 기록 | ✅ Completed |
 | | SignerListSet (2-of-2 MultiSig) 승인 구조 | ✅ Completed |
 | | CryptoCondition Escrow 자산 잠금/해제 | ✅ Completed |
-| | **Credentials (XLS-70) AI 검증 인증서 발급** | 🔄 Testnet |
+| | **Credentials (XLS-70) AI 검증 인증서 발급** | ✅ Mainnet (2025.09 활성화) |
 | **인프라** | Node.js v18 백엔드 + Demo Mode | ✅ Completed |
 | | UnveilSDK — 통합 API 추상화 레이어 | ✅ Completed |
 | **검증 상태** | XRPL Testnet 온체인 로그 추적 | ✅ Verified |
