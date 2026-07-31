@@ -1,11 +1,26 @@
+
+ Unveil
+
+## Current Direction (2026)
+
+Financial Event Infrastructure for Institutional Finance.
+
+Previous iterations explored trust verification for digital content and blockchain ecosystems.
+
+Through customer validation with financial operations professionals, Unveil evolved toward verifying and reconstructing Financial Events across institutional finance.
+
+---
+
+> _Archived below: previous iteration (Unveil Protocol — XRPL/blockchain trust verification)._
+
+---
 # UNVEIL PROTOCOL
 
-**The Digital Customs of the Blockchain Era**
+The Digital Customs of the Blockchain Era
 
 *GitHub Repository — KFIP / XRPL Evaluation*
 
 ---
-hh
 > **An insurer receives a suspicious claim image just before payout.**
 
 | 단계 | 내용 |
@@ -160,4 +175,4 @@ XRPL의 낮은 지연 시간과 Memo 필드 기반 구조화 데이터 기록은
 
 ---
 
-*Shin Jihee · Founder, Unveil Protocol · olivia040614@naver.com · April 2026*
+*Shin Jihee · Founder, Unveil Protocol · oliviashin040614@naver.com · April 2026*
